@@ -46,6 +46,219 @@ interface ChromaticParticle {
   phase: number;      // Oscillating offset
   frequency: number;  // Warp wave frequency
   brightness: number; // Max potential luminance
+  
+  // Scene dynamic morphing backups
+  scene0X?: number;
+  scene0Y?: number;
+  scene0Z?: number;
+  scene0Type?: 'head' | 'eye' | 'halo_crown' | 'equator_ring' | 'sine_orbital' | 'singularity_core';
+}
+
+interface Point3D {
+  x: number;
+  y: number;
+  z: number;
+  type: 'head' | 'eye' | 'halo_crown' | 'equator_ring' | 'sine_orbital' | 'singularity_core';
+}
+
+function getHypercubeCoordinate(idx: number, total: number, clock: number): Point3D {
+  const edgeParticlesCount = 2000;
+  
+  // Continuous dimension morphing based on asynchronous clocks
+  const tA = 45 + Math.sin(clock * 1.6) * 15;  // Inner cube breathes
+  const tB = 105 + Math.cos(clock * 1.2) * 25; // Outer cube expands/shrinks
+  
+  // Continuous torsional twisting around Y-axis based on position and time
+  const rotationStrength = Math.sin(clock * 0.8) * 0.45;
+  const twist = (ptPos: { x: number; y: number; z: number }) => {
+    const angle = ptPos.y * (rotationStrength / 100);
+    const cosR = Math.cos(angle);
+    const sinR = Math.sin(angle);
+    return {
+      x: ptPos.x * cosR - ptPos.z * sinR,
+      y: ptPos.y,
+      z: ptPos.x * sinR + ptPos.z * cosR
+    };
+  };
+
+  if (idx < edgeParticlesCount) {
+    const edgeIndex = idx % 32;
+    const t = ((idx / 32) % 1); // interpolator along the edge [0, 1]
+    const val = -1 + t * 2; // goes from -1 to 1
+    
+    let x = 0, y = 0, z = 0;
+    
+    if (edgeIndex < 12) {
+      // Inner cube edges
+      const subEdge = edgeIndex % 4;
+      const c1 = subEdge % 2 === 0 ? -tA : tA;
+      const c2 = subEdge < 2 ? -tA : tA;
+      if (edgeIndex < 4) {
+        x = val * tA; y = c1; z = c2;
+      } else if (edgeIndex < 8) {
+        x = c1; y = val * tA; z = c2;
+      } else {
+        x = c1; y = c2; z = val * tA;
+      }
+    } else if (edgeIndex < 24) {
+      // Outer cube edges
+      const subEdge = (edgeIndex - 12) % 4;
+      const c1 = subEdge % 2 === 0 ? -tB : tB;
+      const c2 = subEdge < 2 ? -tB : tB;
+      if (edgeIndex < 16) {
+        x = val * tB; y = c1; z = c2;
+      } else if (edgeIndex < 20) {
+        x = c1; y = val * tB; z = c2;
+      } else {
+        x = c1; y = c2; z = val * tB;
+      }
+    } else {
+      // Connecting struts (8 struts)
+      const strutIndex = edgeIndex - 24;
+      const sx = (strutIndex % 2 === 0 ? -1 : 1);
+      const sy = ((Math.floor(strutIndex / 2) % 2) === 0 ? -1 : 1);
+      const sz = ((Math.floor(strutIndex / 4) % 2) === 0 ? -1 : 1);
+      
+      const currScale = tA + (t * (tB - tA));
+      x = sx * currScale;
+      y = sy * currScale;
+      z = sz * currScale;
+    }
+    
+    const twisted = twist({ x, y, z });
+    return { 
+      x: twisted.x, 
+      y: twisted.y, 
+      z: twisted.z, 
+      type: edgeIndex % 2 === 0 ? 'head' : 'sine_orbital' 
+    };
+  } else {
+    // Remaining particles form dual orbital protective shields
+    const ringIdx = idx - edgeParticlesCount;
+    const remainingCount = total - edgeParticlesCount;
+    const angle = (ringIdx / remainingCount) * Math.PI * 2 + clock * 0.4;
+    const radius = 175 + Math.sin(clock * 1.5 + angle * 3) * 15;
+    
+    if (ringIdx % 2 === 0) {
+      return {
+        x: radius * Math.cos(angle),
+        y: Math.sin(angle * 4 + clock * 3.5) * 18,
+        z: radius * Math.sin(angle),
+        type: 'equator_ring',
+      };
+    } else {
+      return {
+        x: radius * Math.cos(angle),
+        y: radius * Math.sin(angle),
+        z: Math.cos(angle * 4 + clock * 3.5) * 18,
+        type: 'halo_crown',
+      };
+    }
+  }
+}
+
+function getTorusKnotCoordinate(idx: number, total: number, clock: number): Point3D {
+  // Constant wobble cycles - winds and unwinds ribbon structures
+  const angle = (idx / total) * Math.PI * 2 * (3 + Math.sin(clock * 0.4) * 0.8);
+  const p = 3 + Math.sin(clock * 0.7) * 0.5;
+  const q = 7 + Math.cos(clock * 0.5) * 1.1;
+  
+  const tubeRadius = (16 + Math.sin(idx * 0.05 + clock * 3.0) * 8) * (1.0 + 0.25 * Math.sin(clock * 1.8));
+  const tubeAngle = idx * 0.15 + clock * 2.5;
+  
+  const radiusScale = 55 + 24 * Math.cos(q * angle + clock * 1.5);
+  const baseX = radiusScale * Math.cos(p * angle);
+  const baseY = radiusScale * Math.sin(p * angle);
+  const baseZ = -40 * Math.sin(q * angle + clock * 2.0);
+  
+  const x = baseX + tubeRadius * Math.cos(tubeAngle);
+  const y = baseY + tubeRadius * Math.sin(tubeAngle);
+  const z = baseZ + tubeRadius * Math.cos(tubeAngle + Math.PI/2);
+  
+  return {
+    x: x * 1.35,
+    y: y * 1.35,
+    z: z * 1.35,
+    type: idx % 12 === 0 ? 'eye' : idx % 3 === 0 ? 'halo_crown' : idx % 3 === 1 ? 'equator_ring' : 'sine_orbital',
+  };
+}
+
+function getGeodesicSphereCoordinate(idx: number, total: number, clock: number): Point3D {
+  const baseRadius = 135;
+  
+  if (idx < 1800) {
+    const ringCount = 10;
+    const ringIndex = idx % ringCount;
+    const theta = ((ringIndex + 0.5) / ringCount) * Math.PI;
+    
+    const inRingIdx = Math.floor(idx / ringCount);
+    const phi = (inRingIdx / (1800 / ringCount)) * Math.PI * 2 + clock * 0.8;
+    
+    // Liquid spherical harmonics ripple
+    const currentRadius = baseRadius + 18 * Math.sin(theta * 5 + clock * 3.2) * Math.cos(phi * 4 + clock * 2.0);
+    
+    const py = currentRadius * Math.cos(theta);
+    const sliceRadius = currentRadius * Math.sin(theta);
+    const px = sliceRadius * Math.cos(phi);
+    const pz = sliceRadius * Math.sin(phi);
+    
+    return {
+      x: px,
+      y: py,
+      z: pz,
+      type: 'equator_ring'
+    };
+  } else if (idx < 2800) {
+    const loopCount = 8;
+    const loopIdx = idx % loopCount;
+    const phi = (loopIdx / loopCount) * Math.PI + clock * 0.3;
+    
+    const inLoopIdx = idx - 1800;
+    const theta = (inLoopIdx / 1000) * Math.PI * 2 + clock * 1.2;
+    
+    // Asymmetric ripple waves
+    const currentRadius = baseRadius + 22 * Math.sin(theta * 4 - clock * 2.5) * Math.sin(phi * 3 + clock * 1.8);
+    
+    const px = currentRadius * Math.sin(theta) * Math.cos(phi);
+    const py = currentRadius * Math.cos(theta);
+    const pz = currentRadius * Math.sin(theta) * Math.sin(phi);
+    
+    return {
+      x: px,
+      y: py,
+      z: pz,
+      type: 'sine_orbital'
+    };
+  } else {
+    const coreIdx = idx - 2800;
+    const maxCore = total - 2800;
+    const isSatellite = coreIdx < maxCore * 0.4;
+    
+    if (isSatellite) {
+      const angle = (coreIdx / (maxCore * 0.4)) * Math.PI * 2 + clock * 1.8;
+      const satRadius = 45 + Math.sin(clock * 2.0 + angle * 4) * 8;
+      return {
+        x: satRadius * Math.cos(angle),
+        y: Math.sin(angle * 3 + clock * 4.0) * 16,
+        z: satRadius * Math.sin(angle),
+        type: 'halo_crown'
+      };
+    } else {
+      const sphereIdx = coreIdx - Math.floor(maxCore * 0.4);
+      const sphereTotal = maxCore - Math.floor(maxCore * 0.4);
+      const theta = Math.acos(-1 + (2 * sphereIdx) / sphereTotal);
+      const phi = Math.PI * 2 * sphereIdx * 0.618033 + clock * 2.2;
+      
+      const coreR = 25 + 8 * Math.sin(clock * 5.0 + sphereIdx * 0.15);
+      
+      return {
+        x: coreR * Math.sin(theta) * Math.cos(phi),
+        y: coreR * Math.cos(theta),
+        z: coreR * Math.sin(theta) * Math.sin(phi),
+        type: 'singularity_core'
+      };
+    }
+  }
 }
 
 // Interactive shockwave expansion definition triggered by click/tap events
@@ -132,6 +345,12 @@ export default function D3Hologram({
 
   // Array of glowing floating sparks created dynamically by cursor sweeps
   const sparkParticlesRef = useRef<SparkParticle[]>([]);
+
+  // Scene timing & dynamic morph transitions
+  const currentSceneRef = useRef(0);
+  const nextSceneRef = useRef(0);
+  const transitionProgressRef = useRef(1.0);
+  const sceneTimerRef = useRef(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -499,6 +718,14 @@ export default function D3Hologram({
       });
     }
 
+    // Populate scene0 backups for morphing
+    particlesPool.forEach((pt) => {
+      pt.scene0X = pt.x;
+      pt.scene0Y = pt.y;
+      pt.scene0Z = pt.z;
+      pt.scene0Type = pt.type;
+    });
+
     // --- SYSTEM INITIALIZATION HANDSHAKE TIMER ---
     let startupCounter = 0;
     const calibratingTimer = setInterval(() => {
@@ -560,6 +787,25 @@ export default function D3Hologram({
       ctx.fillRect(0, 0, width, height);
 
       clock += 0.016 * speedFactorRef.current;
+
+      // Update scene cycling and transition factor
+      sceneTimerRef.current += 0.016 * speedFactorRef.current;
+      const SCENE_DURATION = 10.0; // Show each shape for 10 seconds
+      const TRANSITION_DURATION = 3.0; // Morph transition over 3 seconds
+      
+      if (sceneTimerRef.current >= SCENE_DURATION && transitionProgressRef.current >= 1.0) {
+        sceneTimerRef.current = 0;
+        nextSceneRef.current = (currentSceneRef.current + 1) % 4;
+        transitionProgressRef.current = 0.0;
+      }
+      
+      if (transitionProgressRef.current < 1.0) {
+        transitionProgressRef.current += (0.016 / TRANSITION_DURATION) * speedFactorRef.current;
+        if (transitionProgressRef.current >= 1.0) {
+          transitionProgressRef.current = 1.0;
+          currentSceneRef.current = nextSceneRef.current;
+        }
+      }
 
       // Vertical scanner line movement
       sweepLineY += 3.8 * (intensify ? 2.0 : 1.0);
@@ -725,48 +971,94 @@ export default function D3Hologram({
 
       // --- 2. COMPILE & RENDER ALL PARTICLES INDIVIDUALLY WITH DEFORMATION SYSTEMS ---
       const activeFramePoints = particlesPool.map((pt, index) => {
-        let lx = pt.x;
-        let ly = pt.y;
-        let lz = pt.z;
+        // Local inline helper functions inside the map iterator
+        const getScenePosition = (sceneIndex: number, idx: number, total: number, p: ChromaticParticle): Point3D => {
+          switch (sceneIndex) {
+            case 0: {
+              // Apply organic fluid ripples directly to the skull coordinates so it is never statically resting
+              const waveY = Math.sin((p.scene0Y ?? p.y) * 0.05 + clock * 2.2) * 10;
+              const swingX = Math.cos((p.scene0Z ?? p.z) * 0.06 + clock * 1.5) * 6;
+              const swingZ = Math.sin((p.scene0X ?? p.x) * 0.06 + clock * 1.8) * 6;
+              const breathe = 1.0 + Math.sin(clock * 1.4) * 0.04;
+              return {
+                x: (p.scene0X ?? p.x) * breathe + swingX,
+                y: (p.scene0Y ?? p.y) + waveY,
+                z: (p.scene0Z ?? p.z) * breathe + swingZ,
+                type: p.scene0Type ?? p.type,
+              };
+            }
+            case 1:
+              return getHypercubeCoordinate(idx, total, clock);
+            case 2:
+              return getTorusKnotCoordinate(idx, total, clock);
+            case 3:
+              return getGeodesicSphereCoordinate(idx, total, clock);
+            default:
+              return {
+                x: p.scene0X ?? p.x,
+                y: p.scene0Y ?? p.y,
+                z: p.scene0Z ?? p.z,
+                type: p.scene0Type ?? p.type,
+              };
+          }
+        };
+
+        const posCurrent = getScenePosition(currentSceneRef.current, index, particlesPool.length, pt);
+        const posNext = getScenePosition(nextSceneRef.current, index, particlesPool.length, pt);
+        
+        const lerp = (start: number, end: number, f: number) => start + (end - start) * f;
+        const t = transitionProgressRef.current;
+        const smoothT = t * t * (3 - 2 * t); // Smoothstep
+        
+        const baseX = lerp(posCurrent.x, posNext.x, smoothT);
+        const baseY = lerp(posCurrent.y, posNext.y, smoothT);
+        const baseZ = lerp(posCurrent.z, posNext.z, smoothT);
+        
+        const activeType = t < 0.5 ? posCurrent.type : posNext.type;
+        
+        let lx = baseX;
+        let ly = baseY;
+        let lz = baseZ;
 
         // Biological pulsating breathing shifts
         const pulsationWave = Math.sin(clock * 2.5 + pt.phase) * 3.5;
 
-        // Custom motion based on element type
-        if (pt.type === 'head' || pt.type === 'eye') {
+        // Custom motion based on active morphed element type
+        if (activeType === 'head' || activeType === 'eye') {
           // Subtle breathing expansions
           const expFactor = 1.0 + Math.sin(clock * 1.5 + pt.phase * 0.5) * 0.025;
           lx *= expFactor;
           ly += pulsationWave * 0.3;
           lz *= expFactor;
         } 
-        else if (pt.type === 'halo_crown') {
+        else if (activeType === 'halo_crown') {
           // Symmetrical crown waviness & tilting orbits
           const localAng = pt.angle + clock * 0.6;
-          lx = 110 * Math.cos(localAng);
-          lz = 110 * Math.sin(localAng);
-          ly = 135 + Math.sin(clock * 3.2 + localAng * 5) * 8;
+          // Scale from dynamic base coordinates with additional oscillation waves
+          lx = baseX * 1.1 + Math.sin(clock * 3.2 + localAng * 5) * 4;
+          lz = baseZ * 1.1 + Math.cos(clock * 3.2 + localAng * 5) * 4;
+          ly = baseY + Math.sin(clock * 3.2 + localAng * 5) * 8;
         } 
-        else if (pt.type === 'equator_ring') {
+        else if (activeType === 'equator_ring') {
           // Concentric spinning disks
           const spinspeed = index % 2 === 0 ? 0.35 : -0.22;
           const activeAng = pt.angle + clock * spinspeed;
-          const doubleOffset = index % 2 === 0 ? 1.0 : 1.25;
-          const ringRadius = 165 * doubleOffset;
-
-          lx = ringRadius * Math.cos(activeAng);
-          lz = ringRadius * Math.sin(activeAng);
-          // Waviness equalizer spikes matching telemetry
-          ly = pt.y + Math.cos(clock * 2.8 + activeAng * 8) * 6;
+          
+          // Re-calculate orbital coordinates around dynamic base bounds
+          const baseRadius = Math.hypot(baseX, baseZ);
+          lx = baseRadius * Math.cos(activeAng);
+          lz = baseRadius * Math.sin(activeAng);
+          ly = baseY;
         } 
-        else if (pt.type === 'sine_orbital') {
+        else if (activeType === 'sine_orbital') {
           // Sine acceleration waves
           const runAng = pt.angle + clock * 0.15;
+          const baseRadius = Math.hypot(baseX, baseZ);
           const waveformAmplitude = 25 + Math.sin(clock * 3.8 + pt.angle * 12) * 12;
 
-          const baseRadius = 210 + waveformAmplitude;
-          const bx = baseRadius * Math.cos(runAng);
-          const bz = baseRadius * Math.sin(runAng);
+          const currentRadius = baseRadius + (waveformAmplitude * (baseRadius > 100 ? 1.0 : 0.4));
+          const bx = currentRadius * Math.cos(runAng);
+          const bz = currentRadius * Math.sin(runAng);
           const by = Math.sin(clock * 2.0 + pt.angle * 6) * 15;
 
           // Align inclined coordinates
@@ -775,12 +1067,12 @@ export default function D3Hologram({
           ly = bx * Math.sin(tiltFactor) + by * Math.cos(tiltFactor);
           lz = bz;
         }
-        else if (pt.type === 'singularity_core') {
-          // Intense core orbit inside alien mind focus center
+        else if (activeType === 'singularity_core') {
+          // Intense core orbit around central system singularity focus
           const orbitalExpansion = 18 + Math.cos(clock * 5.5 + pt.phase) * 7.5;
-          lx = orbitalExpansion * Math.sin(pt.angle) * Math.cos(pt.phase);
-          ly = 10 + orbitalExpansion * Math.sin(pt.angle) * Math.sin(pt.phase);
-          lz = orbitalExpansion * Math.cos(pt.angle);
+          lx = baseX + orbitalExpansion * Math.sin(pt.angle) * Math.cos(pt.phase);
+          ly = baseY + orbitalExpansion * Math.sin(pt.angle) * Math.sin(pt.phase);
+          lz = baseZ + orbitalExpansion * Math.cos(pt.angle);
         }
 
         // --- PHYSICAL SHOCKWAVE DISPLACEMENT ENGINE (Click reactive singularity pop) ---
@@ -864,15 +1156,15 @@ export default function D3Hologram({
         // Map colors smoothly with speed-adaptive high frequency cycles
         let baseOrbitHue = 0;
         const speedMultiplier = 1.0 + pointerRef.current.speed * 3.2; // Colors move much faster during rapid mouse sweeps!
-        if (pt.type === 'head') {
+        if (activeType === 'head') {
           baseOrbitHue = (Math.abs(pt.angle) * 360 / (Math.PI * 2) + clock * 25 * speedMultiplier) % 360;
-        } else if (pt.type === 'eye') {
+        } else if (activeType === 'eye') {
           baseOrbitHue = (180 + clock * 75 * speedMultiplier) % 360;
-        } else if (pt.type === 'halo_crown') {
+        } else if (activeType === 'halo_crown') {
           baseOrbitHue = (index * 2 + clock * 40 * speedMultiplier) % 360;
-        } else if (pt.type === 'equator_ring') {
+        } else if (activeType === 'equator_ring') {
           baseOrbitHue = (pt.angle * 180 / Math.PI - clock * 30 * speedMultiplier) % 360;
-        } else if (pt.type === 'sine_orbital') {
+        } else if (activeType === 'sine_orbital') {
           baseOrbitHue = (pt.angle * 180 / Math.PI + clock * 60 * speedMultiplier) % 360;
         } else {
           baseOrbitHue = (clock * 110 * speedMultiplier) % 360;
@@ -887,6 +1179,7 @@ export default function D3Hologram({
           activeInScanSweep,
           shockwaveTriggered,
           shockwaveOffsetMag,
+          activeType,
         };
       });
 
@@ -915,6 +1208,7 @@ export default function D3Hologram({
           activeInScanSweep: false,
           shockwaveTriggered: false,
           shockwaveOffsetMag: 0,
+          activeType: 'singularity_core',
         });
       });
 
@@ -923,7 +1217,7 @@ export default function D3Hologram({
       activeFramePoints.sort((a, b) => b.proj.depth - a.proj.depth);
 
       // --- RENDERING LOOP WITH CHROMATIC ABERRATION SPLITS AND ORNATE STYLES ---
-      activeFramePoints.forEach(({ pt, proj, hue, idx, cursorDistSq, activeInScanSweep, shockwaveTriggered, shockwaveOffsetMag }) => {
+      activeFramePoints.forEach(({ pt, proj, hue, idx, cursorDistSq, activeInScanSweep, shockwaveTriggered, shockwaveOffsetMag, activeType }) => {
         if (proj.depth <= -maxDrawDistance) return;
 
         // Depth-dependent focal alpha
@@ -988,9 +1282,9 @@ export default function D3Hologram({
 
         // Determine if rendering style is text glyph or simple structural pixel
         // Eye Sockets, Halos, Singularity and Glitched sweep lines choose high frequency text symbols
-        const selectTextSymbol = (pt.type === 'eye' && idx % 2 === 0) ||
-                                 (pt.type === 'halo_crown' && idx % 4 === 0) ||
-                                 (pt.type === 'singularity_core') ||
+        const selectTextSymbol = (activeType === 'eye' && idx % 2 === 0) ||
+                                 (activeType === 'halo_crown' && idx % 4 === 0) ||
+                                 (activeType === 'singularity_core') ||
                                  (cursorDistSq < 110 && Math.sin(clock * 5 + idx) > 0.4) ||
                                  activeInScanSweep ||
                                  shockwaveTriggered;
@@ -1020,7 +1314,7 @@ export default function D3Hologram({
         else {
           // Normal seamless rendering fallback when stable (Unified Spectrum RGB)
           // Eye sockets glow intensely with spectrum backlights
-          if (pt.type === 'eye') {
+          if (activeType === 'eye') {
             ctx.shadowColor = `rgba(${spectrum.r}, ${spectrum.g}, ${spectrum.b}, ${alpha * 0.7})`;
             ctx.shadowBlur = 8;
           }
@@ -1086,6 +1380,19 @@ export default function D3Hologram({
       ctx.lineTo(width - paddingEdge, height - paddingEdge);
       ctx.lineTo(width - paddingEdge, height - paddingEdge - 15);
       ctx.stroke();
+
+      // Draw Hologram Active Mode Monospaced text underneath top left corner marker
+      ctx.fillStyle = `rgba(${rgbLine.r}, ${rgbLine.g}, ${rgbLine.b}, 0.28)`;
+      ctx.font = '7px monospace';
+      ctx.textAlign = 'left';
+      const sceneNames = [
+        'HOLOMETRIC SCENE PROJECTION: ACTIVE_MATRIX_SKULL // CC-09',
+        'HOLOMETRIC SCENE PROJECTION: HYPERDIMENSIONAL_TESSERACT // CC-10',
+        'HOLOMETRIC SCENE PROJECTION: CELESTIAL_TORUS_KNOT // CC-11',
+        'HOLOMETRIC SCENE PROJECTION: QUANTUM_MATRIX_GLOBE // CC-12'
+      ];
+      const activeName = sceneNames[currentSceneRef.current];
+      ctx.fillText(activeName, paddingEdge + 25, paddingEdge + 10);
 
       frameId = requestAnimationFrame(render);
     };

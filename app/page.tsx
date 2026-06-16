@@ -9,6 +9,8 @@ export default function Home() {
   const [accessCode, setAccessCode] = useState('');
   const [status, setStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
   const [showAbout, setShowAbout] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const [mathAnswer, setMathAnswer] = useState('');
   const [verifiedEmail, setVerifiedEmail] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
@@ -20,9 +22,6 @@ export default function Home() {
   const [speedFactor, setSpeedFactor] = useState(1.0);
   const [particleSizeScale, setParticleSizeScale] = useState(1.0);
 
-  // Exclusive secret codes list
-  const authorizedCodes = ['QUANTUM', 'MEDIUM', 'HOLOGRAPH', 'CERN', 'EVU', 'SPATIAL'];
-
   const handleSubmitCode = (e: React.FormEvent) => {
     e.preventDefault();
     if (!accessCode) return;
@@ -30,12 +29,8 @@ export default function Home() {
     setStatus('authorizing');
 
     setTimeout(() => {
-      const normalized = accessCode.trim().toUpperCase();
-      if (authorizedCodes.includes(normalized)) {
-        setStatus('success');
-      } else {
-        setStatus('error');
-      }
+      // Deactivated validation: no words will ever grant access
+      setStatus('error');
     }, 1200);
   };
 
@@ -318,7 +313,7 @@ export default function Home() {
                       animate={{ opacity: 1, y: 0 }}
                       className="text-[9px] font-mono tracking-widest text-[#f43f5e] mt-4.5 uppercase font-bold"
                     >
-                      * INVALID SIGNATURE SEQUENCE. TRY &ldquo;MEDIUM&rdquo; OR &ldquo;EVU&rdquo;.
+                      * ACCESS DENIED. INVALID SIGNATURE SEQUENCE.
                     </motion.p>
                   )}
                 </form>
@@ -334,15 +329,187 @@ export default function Home() {
       <footer className="relative w-full text-center pb-12 z-10 select-none">
         <a
           id="evu-hyperlink"
-          href="https://evu.com"
+          href="https://www.evu.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-neutral-950/80 border border-emerald-500/25 hover:border-emerald-400/60 hover:bg-emerald-950/20 text-emerald-400 hover:text-emerald-300 font-mono text-xs tracking-[0.25em] uppercase transition-all duration-300 shadow-[0_4px_15px_rgba(0,0,0,0.6)] cursor-pointer"
+          className="inline-flex items-baseline gap-2.5 px-10 py-5 rounded-full bg-neutral-950/95 border border-white/15 hover:border-white/35 hover:bg-neutral-900/40 text-white font-mono text-sm sm:text-base tracking-[0.25em] font-bold uppercase transition-all duration-300 shadow-[0_4px_25px_rgba(0,0,0,0.8)] cursor-pointer"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          coming soon from evu
+          <span className="leading-none select-none">coming soon from</span>
+          <svg
+            className="w-auto text-white shrink-0 align-baseline select-none"
+            style={{ height: '0.72em' }}
+            viewBox="5 10 138.75 39.75"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect x="5" y="10" width="38" height="9.5" rx="4.5" fill="currentColor" />
+            <rect x="5" y="24" width="26" height="9.5" rx="4.5" fill="currentColor" />
+            <rect x="5" y="38" width="38" height="9.5" rx="4.5" fill="currentColor" />
+            <path
+              d="M 55,14.75 L 75,41 L 95,14.75"
+              stroke="currentColor"
+              strokeWidth="9.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+            <path
+              d="M 111,14.75 L 111,31 A 14,14 0 0 0 139,31 L 139,14.75"
+              stroke="currentColor"
+              strokeWidth="9.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          </svg>
         </a>
       </footer>
+
+      {/* Subtle Stealth Legal Nodes in bottom left corner */}
+      <div 
+        id="metadata-legal-links"
+        className="fixed bottom-4 left-4 sm:left-8 z-20 flex items-center gap-4 text-[9px] font-mono tracking-[0.2em] text-neutral-500/60 select-none hidden sm:flex"
+      >
+        <button 
+          onClick={() => {
+            setShowPrivacy(true);
+            setShowTerms(false);
+            setShowAbout(false);
+          }} 
+          className="hover:text-neutral-200 transition-colors duration-200 uppercase cursor-pointer text-left"
+        >
+          Privacy Policy
+        </button>
+        <span className="w-1 h-1 rounded-full bg-neutral-800" />
+        <button 
+          onClick={() => {
+            setShowTerms(true);
+            setShowPrivacy(false);
+            setShowAbout(false);
+          }} 
+          className="hover:text-neutral-200 transition-colors duration-200 uppercase cursor-pointer text-left"
+        >
+          Terms of Service
+        </button>
+      </div>
+
+      {/* Subtle Crawler Index / AI agent control node in bottom corner */}
+      <div 
+        id="metadata-crawler-links"
+        className="fixed bottom-4 right-4 sm:right-8 z-20 flex items-center gap-4 text-[9px] font-mono tracking-[0.2em] text-neutral-500/60 select-none hidden sm:flex"
+      >
+        <a 
+          href="/sitemap.xml" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="hover:text-neutral-200 transition-colors duration-200 uppercase"
+        >
+          Sitemap
+        </a>
+        <span className="w-1 h-1 rounded-full bg-neutral-800" />
+        <a 
+          href="/robots.txt" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="hover:text-neutral-200 transition-colors duration-200 uppercase"
+        >
+          Robots.txt
+        </a>
+        <span className="w-1 h-1 rounded-full bg-neutral-800" />
+        <a 
+          href="/robots.txt" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          title="AI Agent Scraping Configuration Guide"
+          className="hover:text-neutral-200 transition-colors duration-200 uppercase"
+        >
+          AI Agents Policy
+        </a>
+      </div>
+
+      {/* Privacy Policy Overlays */}
+      <AnimatePresence>
+        {showPrivacy && (
+          <motion.div
+            key="privacy-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.98, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.98, y: 10 }}
+              className="max-w-md w-full bg-[#131217] border border-white/10 shadow-[0_0_30px_rgba(255,255,255,0.05)] rounded-xl p-8 text-left relative"
+            >
+              <button
+                onClick={() => setShowPrivacy(false)}
+                className="absolute top-6 right-6 text-neutral-400 hover:text-white font-mono text-[10px] tracking-widest uppercase cursor-pointer"
+              >
+                [ CLOSE ]
+              </button>
+
+              <h2 className="font-display font-light text-base tracking-[0.25em] text-white uppercase mb-4 font-mono shadow-sm">
+                THE EVU DATA DIRECTORY
+              </h2>
+
+              <div className="space-y-4 text-xs font-light text-neutral-300 leading-relaxed tracking-wide mb-8 font-mono">
+                <p className="text-emerald-400 font-semibold">[ SECTION 01: ISOLATION PROTOCOLS ]</p>
+                <p>
+                  We take your digital footprint seriously. All holographic configurations, experimental interface constants, and local coordinate mappings are strictly localized within your browser memory storage. No personal metrics are logged.
+                </p>
+                <p className="text-emerald-400 font-semibold">[ SECTION 02: SYSTEM INTERFACE INTEGRATION ]</p>
+                <p>
+                  EVU and HOLOGRAPH systems do not broadcast tracking signals, cookies, or analytical parameters. Your interaction with the spatial interface remains entirely private and mathematically unprofiled.
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Terms of Service Overlays */}
+      <AnimatePresence>
+        {showTerms && (
+          <motion.div
+            key="terms-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.98, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.98, y: 10 }}
+              className="max-w-md w-full bg-[#131217] border border-white/10 shadow-[0_0_30px_rgba(255,255,255,0.05)] rounded-xl p-8 text-left relative"
+            >
+              <button
+                onClick={() => setShowTerms(false)}
+                className="absolute top-6 right-6 text-neutral-400 hover:text-white font-mono text-[10px] tracking-widest uppercase cursor-pointer"
+              >
+                [ CLOSE ]
+              </button>
+
+              <h2 className="font-display font-light text-base tracking-[0.25em] text-white uppercase mb-4 font-mono shadow-sm">
+                EVU PLATFORM PROTOCOLS
+              </h2>
+
+              <div className="space-y-4 text-xs font-light text-neutral-300 leading-relaxed tracking-wide mb-8 font-mono">
+                <p className="text-emerald-400 font-semibold">[ CLAUSE A: DIMENSIONAL LIMITS ]</p>
+                <p>
+                  By interacting with these holographic projections, user agents acknowledge physical limits. Experimental layouts are provided on an as-is, as-available basis for exploratory research only.
+                </p>
+                <p className="text-emerald-400 font-semibold">[ CLAUSE B: AUTONOMOUS LOGISTICS ]</p>
+                <p>
+                  EVU reserves the right to shift structural coordinates, color spaces, and core math constants at will to maintain dimensional coherence across system deployments.
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* About Drawer Overlay (Pristine, sleek matrix-mode terminal panel with superior legibility) */}
       <AnimatePresence>
