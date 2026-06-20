@@ -13,6 +13,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/api/', '/private/'],
       }
     ],
-    sitemap: 'https://www.evu.com/sitemap.xml',
+    sitemap: 'https://www.holograph.cc/sitemap.xml',
   };
 }

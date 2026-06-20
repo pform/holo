@@ -261,6 +261,154 @@ function getGeodesicSphereCoordinate(idx: number, total: number, clock: number):
   }
 }
 
+function getEvuLogoCoordinate(idx: number, total: number, clock: number): Point3D {
+  const segment = Math.floor((idx / total) * 3);
+  const segmentSize = Math.ceil(total / 3);
+  const localIdx = idx - segment * segmentSize;
+
+  // Stable pseudo-random generators
+  const random = (s: number) => {
+    const val = Math.sin(s * 12.9898 + 0.123) * 43758.5453;
+    return val - Math.floor(val);
+  };
+
+  const r1 = random(localIdx * 1.37 + 0.1);
+  const r2 = random(localIdx * 3.14 + 0.2);
+  const r3 = random(localIdx * 7.82 + 0.3);
+
+  let xVal = 0;
+  let yVal = 0;
+  let type: 'head' | 'eye' | 'halo_crown' | 'equator_ring' | 'sine_orbital' | 'singularity_core' = 'sine_orbital';
+
+  if (segment === 0) {
+    // E
+    type = 'halo_crown';
+    const totalE = segmentSize; 
+    const topCount = Math.floor(totalE * (361 / 969));
+    const midCount = Math.floor(totalE * (247 / 969));
+
+    const sampleRoundedRect = (xmin: number, ymin: number, W: number, H: number, R: number, ra: number, rb: number) => {
+      let px = xmin + ra * W;
+      let py = ymin + rb * H;
+      const xmax = xmin + W;
+      const ymax = ymin + H;
+      if (px < xmin + R && py < ymin + R) {
+        const cx = xmin + R, cy = ymin + R;
+        const dx = px - cx, dy = py - cy;
+        if (Math.hypot(dx, dy) > R) {
+          const angle = Math.atan2(dy, dx);
+          px = cx + Math.cos(angle) * R;
+          py = cy + Math.sin(angle) * R;
+        }
+      } else if (px > xmax - R && py < ymin + R) {
+        const cx = xmax - R, cy = ymin + R;
+        const dx = px - cx, dy = py - cy;
+        if (Math.hypot(dx, dy) > R) {
+          const angle = Math.atan2(dy, dx);
+          px = cx + Math.cos(angle) * R;
+          py = cy + Math.sin(angle) * R;
+        }
+      } else if (px < xmin + R && py > ymax - R) {
+        const cx = xmin + R, cy = ymax - R;
+        const dx = px - cx, dy = py - cy;
+        if (Math.hypot(dx, dy) > R) {
+          const angle = Math.atan2(dy, dx);
+          px = cx + Math.cos(angle) * R;
+          py = cy + Math.sin(angle) * R;
+        }
+      } else if (px > xmax - R && py > ymax - R) {
+        const cx = xmax - R, cy = ymax - R;
+        const dx = px - cx, dy = py - cy;
+        if (Math.hypot(dx, dy) > R) {
+          const angle = Math.atan2(dy, dx);
+          px = cx + Math.cos(angle) * R;
+          py = cy + Math.sin(angle) * R;
+        }
+      }
+      return { x: px, y: py };
+    };
+
+    if (localIdx < topCount) {
+      // Top bar: x in [-70, -30], y in [10, 20] (thickness 10)
+      const pt = sampleRoundedRect(-70, 10, 40, 10, 5, r1, r2);
+      xVal = pt.x;
+      yVal = pt.y;
+    } else if (localIdx < topCount + midCount) {
+      // Middle bar: x in [-70, -40], y in [-5, 5] (narrower 30 wide, left-aligned)
+      const pt = sampleRoundedRect(-70, -5, 30, 10, 5, r1, r2);
+      xVal = pt.x;
+      yVal = pt.y;
+    } else {
+      // Bottom bar: x in [-70, -30], y in [-20, -10]
+      const pt = sampleRoundedRect(-70, -20, 40, 10, 5, r1, r2);
+      xVal = pt.x;
+      yVal = pt.y;
+    }
+  }
+  else if (segment === 1) {
+    // V
+    type = 'singularity_core';
+    const isLeft = localIdx < (segmentSize / 2);
+    
+    let ax = 0, ay = 0, bx = 0, by = 0;
+    if (isLeft) {
+      ax = -15; ay = 20;
+      bx = 0; by = -20;
+    } else {
+      ax = 0; ay = -20;
+      bx = 15; by = 20;
+    }
+
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len = Math.hypot(dx, dy);
+    const ux = dx / len;
+    const uy = dy / len;
+    const px = -uy;
+    const py = ux;
+
+    const offset = (r2 - 0.5) * 10.0;
+    xVal = ax + r1 * dx + offset * px;
+    yVal = ay + r1 * dy + offset * py;
+  }
+  else {
+    // U
+    type = 'head';
+    const totalU = segmentSize;
+    const leftCount = Math.floor(totalU * (25 / 97.12));
+    const arcCount = Math.floor(totalU * (47.12 / 97.12));
+
+    if (localIdx < leftCount) {
+      // Left vertical stem: from (35, -5) to (35, 20) with width 10
+      xVal = 35.0 + (r2 - 0.5) * 10.0;
+      yVal = -5.0 + r1 * 25.0;
+    } else if (localIdx < leftCount + arcCount) {
+      // Bottom-most semi-circular arc: centered at (50, -5), radius 15
+      const angle = Math.PI + r1 * Math.PI;
+      const radialDist = 15.0 + (r2 - 0.5) * 10.0;
+      xVal = 50.0 + Math.cos(angle) * radialDist;
+      yVal = -5.0 + Math.sin(angle) * radialDist;
+    } else {
+      // Right vertical stem: from (65, -5) to (65, 20) with width 10
+      xVal = 65.0 + (r2 - 0.5) * 10.0;
+      yVal = -5.0 + r1 * 25.0;
+    }
+  }
+
+  // Scale and center mapping from local space to 3D coordinate space centered perfectly
+  const xMapped = xVal * 1.8;
+  const yMapped = -yVal * 1.8; // Negative makes positive 3D yVal map to negative Canvas 2D Y (top of screen)
+  // Add volumetric thickness depth
+  const zMapped = (r3 - 0.5) * 12.0;
+
+  return {
+    x: xMapped,
+    y: yMapped,
+    z: zMapped,
+    type: type
+  };
+}
+
 // Interactive shockwave expansion definition triggered by click/tap events
 interface ClickShockwave {
   x3d: number;
@@ -307,6 +455,7 @@ export default function D3Hologram({
   const globalColorShiftRef = useRef(globalColorShift);
   const speedFactorRef = useRef(speedFactor);
   const particleSizeScaleRef = useRef(particleSizeScale);
+  const intensifyRef = useRef(intensify);
 
   useEffect(() => {
     globalColorShiftRef.current = globalColorShift;
@@ -319,6 +468,10 @@ export default function D3Hologram({
   useEffect(() => {
     particleSizeScaleRef.current = particleSizeScale;
   }, [particleSizeScale]);
+
+  useEffect(() => {
+    intensifyRef.current = intensify;
+  }, [intensify]);
 
   // Mouse / Pointer positional tracking for fluid spring inertia with swift physical velocity calculations
   const pointerRef = useRef({
@@ -404,24 +557,29 @@ export default function D3Hologram({
       const dy = currentY - pointerRef.current.lastY;
       const movementDist = Math.hypot(dx, dy);
 
-      // Spawn dynamic colorful stellar tail sparks on motion
-      if (Math.random() < 0.35 && movementDist > 3) {
-        const clickX3d = (relativeX / (Math.min(width, height) * 0.42)) * 140;
-        const clickY3d = (relativeY / (Math.min(width, height) * 0.42)) * 140;
+      // Spawn a dramatic storm of highly energetic, multi-colored rainbow sparks on fast motion
+      if (movementDist > 2) {
+        const spawnCount = Math.max(2, Math.min(8, Math.floor(movementDist / 1.5)));
+        for (let s = 0; s < spawnCount; s++) {
+          const clickX3d = (relativeX / (Math.min(width, height) * 0.42)) * 140;
+          const clickY3d = (relativeY / (Math.min(width, height) * 0.42)) * 140;
+          const sparkGlyphList = '✦✧★⭐⚡︎☄✴✨🌈🛸✴⚛';
+          const sparkChar = sparkGlyphList.charAt(Math.floor(Math.random() * sparkGlyphList.length));
 
-        sparkParticlesRef.current.push({
-          x3d: clickX3d + (Math.random() - 0.5) * 10,
-          y3d: clickY3d + (Math.random() - 0.5) * 10,
-          z3d: (Math.random() - 0.5) * 20,
-          vx3d: (Math.random() - 0.5) * 2 + (dx * 0.15),
-          vy3d: (Math.random() - 0.5) * 2 + (dy * 0.15),
-          vz3d: (Math.random() - 0.5) * 4,
-          char: cyberGlyphs.charAt(Math.floor(Math.random() * cyberGlyphs.length)),
-          hue: Math.random() * 360,
-          life: 1.0,
-          decay: 0.02 + Math.random() * 0.025,
-          scale: 0.8 + Math.random() * 1.2,
-        });
+          sparkParticlesRef.current.push({
+            x3d: clickX3d + (Math.random() - 0.5) * 16,
+            y3d: clickY3d + (Math.random() - 0.5) * 16,
+            z3d: (Math.random() - 0.5) * 25,
+            vx3d: (Math.random() - 0.5) * 4 + (dx * 0.18),
+            vy3d: (Math.random() - 0.5) * 4 + (dy * 0.18),
+            vz3d: (Math.random() - 0.5) * 6,
+            char: sparkChar,
+            hue: Math.random() * 360,
+            life: 1.0,
+            decay: 0.015 + Math.random() * 0.02,
+            scale: 1.0 + Math.random() * 1.6,
+          });
+        }
       }
 
       pointerRef.current.lastX = currentX;
@@ -495,23 +653,28 @@ export default function D3Hologram({
         const dy = currentY - pointerRef.current.lastY;
         const movementDist = Math.hypot(dx, dy);
 
-        if (Math.random() < 0.35 && movementDist > 3) {
-          const clickX3d = (relativeX / (Math.min(width, height) * 0.42)) * 140;
-          const clickY3d = (relativeY / (Math.min(width, height) * 0.42)) * 140;
+        if (movementDist > 2) {
+          const spawnCount = Math.max(2, Math.min(8, Math.floor(movementDist / 1.5)));
+          for (let s = 0; s < spawnCount; s++) {
+            const clickX3d = (relativeX / (Math.min(width, height) * 0.42)) * 140;
+            const clickY3d = (relativeY / (Math.min(width, height) * 0.42)) * 140;
+            const sparkGlyphList = '✦✧★⭐⚡︎☄✴✨🌈🛸✴⚛';
+            const sparkChar = sparkGlyphList.charAt(Math.floor(Math.random() * sparkGlyphList.length));
 
-          sparkParticlesRef.current.push({
-            x3d: clickX3d + (Math.random() - 0.5) * 10,
-            y3d: clickY3d + (Math.random() - 0.5) * 10,
-            z3d: (Math.random() - 0.5) * 20,
-            vx3d: (Math.random() - 0.5) * 2 + (dx * 0.15),
-            vy3d: (Math.random() - 0.5) * 2 + (dy * 0.15),
-            vz3d: (Math.random() - 0.5) * 4,
-            char: cyberGlyphs.charAt(Math.floor(Math.random() * cyberGlyphs.length)),
-            hue: Math.random() * 360,
-            life: 1.0,
-            decay: 0.02 + Math.random() * 0.025,
-            scale: 0.8 + Math.random() * 1.2,
-          });
+            sparkParticlesRef.current.push({
+              x3d: clickX3d + (Math.random() - 0.5) * 16,
+              y3d: clickY3d + (Math.random() - 0.5) * 16,
+              z3d: (Math.random() - 0.5) * 25,
+              vx3d: (Math.random() - 0.5) * 4 + (dx * 0.18),
+              vy3d: (Math.random() - 0.5) * 4 + (dy * 0.18),
+              vz3d: (Math.random() - 0.5) * 6,
+              char: sparkChar,
+              hue: Math.random() * 360,
+              life: 1.0,
+              decay: 0.015 + Math.random() * 0.02,
+              scale: 1.0 + Math.random() * 1.6,
+            });
+          }
         }
 
         pointerRef.current.lastX = currentX;
@@ -539,6 +702,31 @@ export default function D3Hologram({
         speed: 8.5,
         intensity: 1.0,
       });
+
+      // Spawn a massive, high-velocity physical burst of beautiful multi-colored rainbow sparks on click
+      for (let i = 0; i < 48; i++) {
+        const speed = 2.5 + Math.random() * 8.5;
+        const angle = (i / 48) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+        const sparkGlyphList = '✦✧★⭐⚡︎☄✴✨🌈🛸✴⚛';
+        const sparkChar = sparkGlyphList.charAt(Math.floor(Math.random() * sparkGlyphList.length));
+
+        sparkParticlesRef.current.push({
+          x3d: x3d,
+          y3d: y3d,
+          z3d: (Math.random() - 0.5) * 15,
+          vx3d: Math.cos(angle) * speed + (Math.random() - 0.5) * 2,
+          vy3d: Math.sin(angle) * speed + (Math.random() - 0.5) * 2,
+          vz3d: (Math.random() - 0.5) * 6,
+          char: sparkChar,
+          hue: Math.random() * 360,
+          life: 1.0,
+          decay: 0.012 + Math.random() * 0.018,
+          scale: 1.2 + Math.random() * 1.5,
+        });
+      }
+
+      // Trigger a bright flashing surge of light on interactive click
+      screenFlashIntensity = Math.min(1.0, screenFlashIntensity + 0.85);
     };
 
     container.addEventListener('mousemove', handleMouseMove);
@@ -773,6 +961,8 @@ export default function D3Hologram({
     let clock = 0;
     let frameId: number;
     let sweepLineY = -230;
+    let screenFlashIntensity = 0.0; // Dynamic bright flashes of light across the screen
+    let evuFactor = 0.0; // Transition factor for the EVU brand scene
 
     // Glitch framework trigger values
     let glitchFrameTimer = 0;
@@ -783,32 +973,73 @@ export default function D3Hologram({
 
     const render = () => {
       // Atmospheric outer space backdrop clearance
-      ctx.fillStyle = '#060509';
-      ctx.fillRect(0, 0, width, height);
+      ctx.clearRect(0, 0, width, height);
 
-      clock += 0.016 * speedFactorRef.current;
-
-      // Update scene cycling and transition factor
-      sceneTimerRef.current += 0.016 * speedFactorRef.current;
-      const SCENE_DURATION = 10.0; // Show each shape for 10 seconds
-      const TRANSITION_DURATION = 3.0; // Morph transition over 3 seconds
-      
-      if (sceneTimerRef.current >= SCENE_DURATION && transitionProgressRef.current >= 1.0) {
-        sceneTimerRef.current = 0;
-        nextSceneRef.current = (currentSceneRef.current + 1) % 4;
-        transitionProgressRef.current = 0.0;
-      }
-      
-      if (transitionProgressRef.current < 1.0) {
-        transitionProgressRef.current += (0.016 / TRANSITION_DURATION) * speedFactorRef.current;
-        if (transitionProgressRef.current >= 1.0) {
-          transitionProgressRef.current = 1.0;
-          currentSceneRef.current = nextSceneRef.current;
+      // Draw horizontal dynamic light glitches (music video aesthetic tear-lines)
+      if (glitchActive || Math.random() < 0.12) {
+        const linesCount = glitchActive ? 8 : 2;
+        ctx.lineWidth = glitchActive ? 2.2 : 0.8;
+        for (let i = 0; i < linesCount; i++) {
+          const sliceY = Math.random() * height;
+          
+          // Fast spectrum dynamic line coloring
+          const lineHue = (clock * 180 + Math.random() * 60) % 360;
+          const rgbL = hsvToRgb(lineHue, 0.95, 0.95);
+          
+          ctx.strokeStyle = `rgba(${rgbL.r}, ${rgbL.g}, ${rgbL.b}, ${glitchActive ? 0.38 : 0.12})`;
+          ctx.beginPath();
+          ctx.moveTo(0, sliceY);
+          ctx.lineTo(width, sliceY + (Math.random() - 0.5) * 8);
+          ctx.stroke();
         }
       }
 
+      clock += 0.016 * speedFactorRef.current;
+
+      // Decay screen flash brightness over time (fits fast-paced music video cuts)
+      if (screenFlashIntensity > 0) {
+        screenFlashIntensity -= 0.035 * speedFactorRef.current;
+        if (screenFlashIntensity < 0) screenFlashIntensity = 0;
+      }
+
+      // Random sporadic bright electricity/matrix energy discharges (music video beat style)
+      if (Math.random() < 0.009) {
+        screenFlashIntensity = Math.max(screenFlashIntensity, 0.45 + Math.random() * 0.45);
+      }
+
+      // Update scene cycling and transition factor
+      sceneTimerRef.current += 0.016 * speedFactorRef.current;
+      const SCENE_DURATION = 4.0; // Stay static on a shape for 4.0 seconds (readable!)
+      const TRANSITION_DURATION = 1.6; // Energetic, snappy transitions (1.6 seconds)
+      
+      if (currentSceneRef.current === nextSceneRef.current) {
+        if (sceneTimerRef.current >= SCENE_DURATION) {
+          sceneTimerRef.current = 0;
+          nextSceneRef.current = (currentSceneRef.current + 1) % 8;
+          transitionProgressRef.current = 0.0;
+          screenFlashIntensity = 1.0; // TRIGGER ENERGETIC FULL SCREEN FLASH
+        }
+      } else {
+        if (transitionProgressRef.current < 1.0) {
+          transitionProgressRef.current += (0.016 / TRANSITION_DURATION) * speedFactorRef.current;
+          if (transitionProgressRef.current >= 1.0) {
+            transitionProgressRef.current = 1.0;
+            currentSceneRef.current = nextSceneRef.current;
+            sceneTimerRef.current = 0; // Reset timer so we rest on the new scene for SCENE_DURATION!
+          }
+        }
+      }
+
+      // Compute general evuFactor for other sub-generators
+      const curIsEvuTmp = currentSceneRef.current % 2 === 1;
+      const nxtIsEvuTmp = nextSceneRef.current % 2 === 1;
+      const tSceneTmp = transitionProgressRef.current;
+      evuFactor = curIsEvuTmp 
+        ? (nxtIsEvuTmp ? 1.0 : 1.0 - tSceneTmp)
+        : (nxtIsEvuTmp ? tSceneTmp : 0.0);
+
       // Vertical scanner line movement
-      sweepLineY += 3.8 * (intensify ? 2.0 : 1.0);
+      sweepLineY += 4.5 * (intensifyRef.current ? 2.5 : 1.0) * speedFactorRef.current;
       if (sweepLineY > 230) {
         sweepLineY = -230;
       }
@@ -845,18 +1076,56 @@ export default function D3Hologram({
 
       // Physics update and filtering of dynamic cursor-trail sparks
       const sparks = sparkParticlesRef.current;
+
+      // Spontaneous background micro-nova / atmospheric plasma burst generator
+      // Emits violent concentric arcs of glowing neon sparks matching the active theme
+      // DISABLED during EVU logo scene to prevent fireworks and keep focus on pristine circuit glitch visuals!
+      if (evuFactor < 0.02 && Math.random() < 0.038) {
+        // Explode anywhere in a neat bounding sphere around the alien head
+        const randX3d = (Math.random() - 0.5) * 190;
+        const randY3d = (Math.random() - 0.5) * 230;
+        const randZ3d = (Math.random() - 0.5) * 85;
+        
+        // Randomly choose a small crackle vs a massive solar flare
+        const burstCount = Math.random() < 0.15 ? 16 + Math.floor(Math.random() * 20) : 6 + Math.floor(Math.random() * 8);
+        const randBaseHue = Math.random() * 360;
+
+        for (let b = 0; b < burstCount; b++) {
+          const speed = 1.8 + Math.random() * 5.2;
+          const angle = Math.random() * Math.PI * 2;
+          const sparkGlyphList = '✦✧★⭐⚡︎☄✴✨🌈🛸✴⚛';
+          const sparkChar = sparkGlyphList.charAt(Math.floor(Math.random() * sparkGlyphList.length));
+
+          sparks.push({
+            x3d: randX3d,
+            y3d: randY3d,
+            z3d: randZ3d,
+            vx3d: Math.cos(angle) * speed + (Math.random() - 0.5) * 1.5,
+            vy3d: Math.sin(angle) * speed + (Math.random() - 0.5) * 1.5,
+            vz3d: (Math.random() - 0.5) * 4.5,
+            char: sparkChar,
+            // Blend sparks between a single intense base burst color and random spectrum hsv gradients
+            hue: (randBaseHue + (Math.random() - 0.5) * 60) % 360,
+            life: 1.0,
+            decay: 0.016 + Math.random() * 0.022,
+            scale: 0.9 + Math.random() * 1.4,
+          });
+        }
+      }
+
       for (let i = sparks.length - 1; i >= 0; i--) {
         const sp = sparks[i];
-        sp.x3d += sp.vx3d;
-        sp.y3d += sp.vy3d;
-        sp.z3d += sp.vz3d;
+        const spDtStr = speedFactorRef.current;
+        sp.x3d += sp.vx3d * spDtStr;
+        sp.y3d += sp.vy3d * spDtStr;
+        sp.z3d += sp.vz3d * spDtStr;
 
-        // Apply friction and atmospheric drag
-        sp.vx3d *= 0.94;
-        sp.vy3d *= 0.94;
-        sp.vz3d *= 0.94;
+        // Apply friction and atmospheric drag scaled by speedFactor
+        sp.vx3d *= Math.pow(0.94, spDtStr);
+        sp.vy3d *= Math.pow(0.94, spDtStr);
+        sp.vz3d *= Math.pow(0.94, spDtStr);
 
-        sp.life -= sp.decay;
+        sp.life -= sp.decay * spDtStr;
         if (sp.life <= 0) {
           sparks.splice(i, 1);
         }
@@ -869,8 +1138,9 @@ export default function D3Hologram({
       const shockwaves = shockwavesRef.current;
       for (let sIdx = shockwaves.length - 1; sIdx >= 0; sIdx--) {
         const wave = shockwaves[sIdx];
-        wave.radius += wave.speed;
-        wave.intensity -= 0.012; // slowly decays out
+        const waveDtStr = speedFactorRef.current;
+        wave.radius += wave.speed * waveDtStr;
+        wave.intensity -= 0.012 * waveDtStr; // slowly decays out
 
         if (wave.radius > wave.maxRadius || wave.intensity <= 0) {
           shockwaves.splice(sIdx, 1);
@@ -897,16 +1167,30 @@ export default function D3Hologram({
         : 9999;
       
       const insideWarpProximity = cursorDistanceToCenter < 180;
-      const hyperGlitchTrigger = glitchActive || (intensify && Math.random() < 0.04) || (insideWarpProximity && Math.random() < 0.03);
+      const hyperGlitchTrigger = glitchActive || (intensifyRef.current && Math.random() < 0.04) || (insideWarpProximity && Math.random() < 0.03);
+
+      // Calculate smooth cinematic locking to front-facing coordinates for EVU scenes
+      const currentIsEvu = currentSceneRef.current % 2 === 1;
+      const nextIsEvu = nextSceneRef.current % 2 === 1;
+      const tScene = transitionProgressRef.current;
+      evuFactor = currentIsEvu 
+        ? (nextIsEvu ? 1.0 : 1.0 - tScene)
+        : (nextIsEvu ? tScene : 0.0); // Simple factor
+      
+      const smoothEvuFactor = currentIsEvu 
+        ? (nextIsEvu ? 1.0 : 1.0 - tScene)
+        : (nextIsEvu ? tScene * tScene * (3 - 2 * tScene) : 0.0);
 
       // HSV-aware 3D coordinate mapping to standard screen viewport
       const project3DCoords = (px: number, py: number, pz: number) => {
-        // Constant automatic slow stellar orbit sweep + mouse tilt Yaw
-        const combinedYaw = rotY + clock * 0.12;
-        const cy = Math.cos(combinedYaw);
-        const sy = Math.sin(combinedYaw);
-        const cx = Math.cos(rotX);
-        const sx = Math.sin(rotX);
+        // Continuous orbit yaw and pitch scale down to zero as smoothEvuFactor goes to 1.0
+        const viewYaw = (rotY + clock * 0.12) * (1.0 - smoothEvuFactor);
+        const viewPitch = rotX * (1.0 - smoothEvuFactor);
+
+        const cy = Math.cos(viewYaw);
+        const sy = Math.sin(viewYaw);
+        const cx = Math.cos(viewPitch);
+        const sx = Math.sin(viewPitch);
 
         // Yaw Y rotation mapping
         let rx1 = px * cy - pz * sy;
@@ -930,7 +1214,7 @@ export default function D3Hologram({
       digitalColumns.forEach((line) => {
         // Shifting Hue based on temporal clock
         const dynamicHue = (line.streamHue + clock * 25) % 360;
-        line.yPos += line.speed * (intensify ? 2.5 : 1.0) * speedFactorRef.current;
+        line.yPos += line.speed * (intensifyRef.current ? 2.5 : 1.0) * speedFactorRef.current;
         
         if (line.yPos > height) {
           line.yPos = Math.random() * -350;
@@ -946,7 +1230,7 @@ export default function D3Hologram({
 
         line.glyphs.forEach((rune, gi) => {
           const depthAlpha = 1.0 - gi / line.glyphs.length;
-          const streamAlpha = line.transparency * depthAlpha * (intensify ? 2.4 : 1.0);
+          const streamAlpha = line.transparency * depthAlpha * (intensifyRef.current ? 2.4 : 1.0);
 
           if (streamAlpha <= 0) return;
 
@@ -973,6 +1257,11 @@ export default function D3Hologram({
       const activeFramePoints = particlesPool.map((pt, index) => {
         // Local inline helper functions inside the map iterator
         const getScenePosition = (sceneIndex: number, idx: number, total: number, p: ChromaticParticle): Point3D => {
+          // Odd indices map to the EVU logo transition scene
+          if (sceneIndex % 2 === 1) {
+            return getEvuLogoCoordinate(idx, total, clock);
+          }
+          
           switch (sceneIndex) {
             case 0: {
               // Apply organic fluid ripples directly to the skull coordinates so it is never statically resting
@@ -987,11 +1276,11 @@ export default function D3Hologram({
                 type: p.scene0Type ?? p.type,
               };
             }
-            case 1:
-              return getHypercubeCoordinate(idx, total, clock);
             case 2:
+              return getHypercubeCoordinate(idx, total, clock);
+            case 4:
               return getTorusKnotCoordinate(idx, total, clock);
-            case 3:
+            case 6:
               return getGeodesicSphereCoordinate(idx, total, clock);
             default:
               return {
@@ -1003,77 +1292,76 @@ export default function D3Hologram({
           }
         };
 
-        const posCurrent = getScenePosition(currentSceneRef.current, index, particlesPool.length, pt);
-        const posNext = getScenePosition(nextSceneRef.current, index, particlesPool.length, pt);
+        const getAnimatedPosition = (sceneIndex: number, idx: number, total: number, p: ChromaticParticle): Point3D => {
+          const basePos = getScenePosition(sceneIndex, idx, total, p);
+          
+          // If it's an EVU logo scene, keep it perfectly flat, crisp and motionless
+          if (sceneIndex % 2 === 1) {
+            return basePos;
+          }
+          
+          let lx = basePos.x;
+          let ly = basePos.y;
+          let lz = basePos.z;
+          
+          const pulsationWave = Math.sin(clock * 2.5 + p.phase) * 3.5;
+          const activeType = basePos.type;
+          
+          if (activeType === 'head' || activeType === 'eye') {
+            const expFactor = 1.0 + Math.sin(clock * 1.5 + p.phase * 0.5) * 0.025;
+            lx *= expFactor;
+            ly += pulsationWave * 0.3;
+            lz *= expFactor;
+          } 
+          else if (activeType === 'halo_crown') {
+            const localAng = p.angle + clock * 0.6;
+            lx = basePos.x * 1.1 + Math.sin(clock * 3.2 + localAng * 5) * 4;
+            lz = basePos.z * 1.1 + Math.cos(clock * 3.2 + localAng * 5) * 4;
+            ly = basePos.y + Math.sin(clock * 3.2 + localAng * 5) * 8;
+          } 
+          else if (activeType === 'equator_ring') {
+            const spinspeed = idx % 2 === 0 ? 0.35 : -0.22;
+            const activeAng = p.angle + clock * spinspeed;
+            const baseRadius = Math.hypot(basePos.x, basePos.z);
+            lx = baseRadius * Math.cos(activeAng);
+            lz = baseRadius * Math.sin(activeAng);
+            ly = basePos.y;
+          } 
+          else if (activeType === 'sine_orbital') {
+            const runAng = p.angle + clock * 0.15;
+            const baseRadius = Math.hypot(basePos.x, basePos.z);
+            const waveformAmplitude = 25 + Math.sin(clock * 3.8 + p.angle * 12) * 12;
+            const currentRadius = baseRadius + (waveformAmplitude * (baseRadius > 100 ? 1.0 : 0.4));
+            const bx = currentRadius * Math.cos(runAng);
+            const bz = currentRadius * Math.sin(runAng);
+            const by = Math.sin(clock * 2.0 + p.angle * 6) * 15;
+            const tiltFactor = 0.70;
+            lx = bx * Math.cos(tiltFactor) - by * Math.sin(tiltFactor);
+            ly = bx * Math.sin(tiltFactor) + by * Math.cos(tiltFactor);
+            lz = bz;
+          }
+          else if (activeType === 'singularity_core') {
+            const orbitalExpansion = 18 + Math.cos(clock * 5.5 + p.phase) * 7.5;
+            lx = basePos.x + orbitalExpansion * Math.sin(p.angle) * Math.cos(p.phase);
+            ly = basePos.y + orbitalExpansion * Math.sin(p.angle) * Math.sin(p.phase);
+            lz = basePos.z + orbitalExpansion * Math.cos(p.angle);
+          }
+          
+          return { x: lx, y: ly, z: lz, type: activeType };
+        };
+
+        const posCurrent = getAnimatedPosition(currentSceneRef.current, index, particlesPool.length, pt);
+        const posNext = getAnimatedPosition(nextSceneRef.current, index, particlesPool.length, pt);
         
         const lerp = (start: number, end: number, f: number) => start + (end - start) * f;
         const t = transitionProgressRef.current;
         const smoothT = t * t * (3 - 2 * t); // Smoothstep
         
-        const baseX = lerp(posCurrent.x, posNext.x, smoothT);
-        const baseY = lerp(posCurrent.y, posNext.y, smoothT);
-        const baseZ = lerp(posCurrent.z, posNext.z, smoothT);
+        let lx = lerp(posCurrent.x, posNext.x, smoothT);
+        let ly = lerp(posCurrent.y, posNext.y, smoothT);
+        let lz = lerp(posCurrent.z, posNext.z, smoothT);
         
         const activeType = t < 0.5 ? posCurrent.type : posNext.type;
-        
-        let lx = baseX;
-        let ly = baseY;
-        let lz = baseZ;
-
-        // Biological pulsating breathing shifts
-        const pulsationWave = Math.sin(clock * 2.5 + pt.phase) * 3.5;
-
-        // Custom motion based on active morphed element type
-        if (activeType === 'head' || activeType === 'eye') {
-          // Subtle breathing expansions
-          const expFactor = 1.0 + Math.sin(clock * 1.5 + pt.phase * 0.5) * 0.025;
-          lx *= expFactor;
-          ly += pulsationWave * 0.3;
-          lz *= expFactor;
-        } 
-        else if (activeType === 'halo_crown') {
-          // Symmetrical crown waviness & tilting orbits
-          const localAng = pt.angle + clock * 0.6;
-          // Scale from dynamic base coordinates with additional oscillation waves
-          lx = baseX * 1.1 + Math.sin(clock * 3.2 + localAng * 5) * 4;
-          lz = baseZ * 1.1 + Math.cos(clock * 3.2 + localAng * 5) * 4;
-          ly = baseY + Math.sin(clock * 3.2 + localAng * 5) * 8;
-        } 
-        else if (activeType === 'equator_ring') {
-          // Concentric spinning disks
-          const spinspeed = index % 2 === 0 ? 0.35 : -0.22;
-          const activeAng = pt.angle + clock * spinspeed;
-          
-          // Re-calculate orbital coordinates around dynamic base bounds
-          const baseRadius = Math.hypot(baseX, baseZ);
-          lx = baseRadius * Math.cos(activeAng);
-          lz = baseRadius * Math.sin(activeAng);
-          ly = baseY;
-        } 
-        else if (activeType === 'sine_orbital') {
-          // Sine acceleration waves
-          const runAng = pt.angle + clock * 0.15;
-          const baseRadius = Math.hypot(baseX, baseZ);
-          const waveformAmplitude = 25 + Math.sin(clock * 3.8 + pt.angle * 12) * 12;
-
-          const currentRadius = baseRadius + (waveformAmplitude * (baseRadius > 100 ? 1.0 : 0.4));
-          const bx = currentRadius * Math.cos(runAng);
-          const bz = currentRadius * Math.sin(runAng);
-          const by = Math.sin(clock * 2.0 + pt.angle * 6) * 15;
-
-          // Align inclined coordinates
-          const tiltFactor = 0.70;
-          lx = bx * Math.cos(tiltFactor) - by * Math.sin(tiltFactor);
-          ly = bx * Math.sin(tiltFactor) + by * Math.cos(tiltFactor);
-          lz = bz;
-        }
-        else if (activeType === 'singularity_core') {
-          // Intense core orbit around central system singularity focus
-          const orbitalExpansion = 18 + Math.cos(clock * 5.5 + pt.phase) * 7.5;
-          lx = baseX + orbitalExpansion * Math.sin(pt.angle) * Math.cos(pt.phase);
-          ly = baseY + orbitalExpansion * Math.sin(pt.angle) * Math.sin(pt.phase);
-          lz = baseZ + orbitalExpansion * Math.cos(pt.angle);
-        }
 
         // --- PHYSICAL SHOCKWAVE DISPLACEMENT ENGINE (Click reactive singularity pop) ---
         let shockwaveOffsetMag = 0;
@@ -1240,8 +1528,15 @@ export default function D3Hologram({
           value = 1.0;
         }
 
+        // Apply screen flash burst overlay parameters to individual nodes
+        if (screenFlashIntensity > 0.01) {
+          alpha = Math.min(1.0, alpha + screenFlashIntensity * 0.65);
+          pointSize *= (1.0 + screenFlashIntensity * 1.3);
+          value = 1.0;
+        }
+
         // Intensify parameters when activated
-        if (intensify) {
+        if (intensifyRef.current) {
           alpha = Math.min(1.0, alpha * 1.8);
           pointSize *= 1.25;
         }
@@ -1256,6 +1551,27 @@ export default function D3Hologram({
         // Get spectrum RGB components
         const spectrum = hsvToRgb(hue, saturation, value);
 
+        // Seamless beautiful transition to glowing radiant white brand color for the main EVU logo scene
+        // We stable-sample a small fraction of the pixels to represent "underlying circuitry glitch holes"
+        const isEvuGlitchedNode = evuFactor > 0.05 && (Math.sin(idx * 0.43 + clock * 9.5) > 0.81);
+
+        if (evuFactor > 0.05 && !isEvuGlitchedNode) {
+          const tLogo = evuFactor;
+          spectrum.r = Math.round(spectrum.r * (1 - tLogo) + 255 * tLogo);
+          spectrum.g = Math.round(spectrum.g * (1 - tLogo) + 255 * tLogo);
+          spectrum.b = Math.round(spectrum.b * (1 - tLogo) + 255 * tLogo);
+          pointSize *= (1.0 + evuFactor * 0.5); // make the strokes bolder and cleaner
+        } else if (evuFactor > 0.05 && isEvuGlitchedNode) {
+          // Glistening rainbow state! Keep original spectrum or spin color rapidly
+          const glitchHue = (hue + clock * 220) % 360;
+          const rgbGlitch = hsvToRgb(glitchHue, 1.0, 1.0);
+          spectrum.r = rgbGlitch.r;
+          spectrum.g = rgbGlitch.g;
+          spectrum.b = rgbGlitch.b;
+          pointSize *= 1.25;
+          alpha = alpha * (0.45 + Math.random() * 0.55); // high frequency electric flickering/shimmering
+        }
+
         // Absolute Chromatic Glitch Aberration Split offset magnitude calculation
         let chromaticShiftX = 0;
         let chromaticShiftY = 0;
@@ -1268,7 +1584,11 @@ export default function D3Hologram({
         // Coherent glitch trigger active for this specific particle
         const isGlitchActiveForNode = localGlitchFactor > 0.12 && (Math.sin(idx * 0.17 + clock * 22) * 0.5 + 0.5) < localGlitchFactor;
 
-        if (isGlitchActiveForNode) {
+        if (isEvuGlitchedNode) {
+          // Circuit glitched nodes undergo massive chromatic displacement
+          chromaticShiftX = (Math.sin(clock * 22 + idx) * 11.5) + (pointerRef.current.velocityX * 0.25);
+          chromaticShiftY = (Math.cos(clock * 18 + idx) * 3.5) + (pointerRef.current.velocityY * 0.25);
+        } else if (isGlitchActiveForNode) {
           // Visual displacement
           const velocityImpact = 1.0 + pointerRef.current.speed * 0.15;
           chromaticShiftX = (Math.sin(clock * 18 + idx) * 8.0 * velocityImpact) + (glitchActive ? glitchOffsetH : 0) + (pointerRef.current.velocityX * 0.3);
@@ -1282,33 +1602,47 @@ export default function D3Hologram({
 
         // Determine if rendering style is text glyph or simple structural pixel
         // Eye Sockets, Halos, Singularity and Glitched sweep lines choose high frequency text symbols
-        const selectTextSymbol = (activeType === 'eye' && idx % 2 === 0) ||
-                                 (activeType === 'halo_crown' && idx % 4 === 0) ||
-                                 (activeType === 'singularity_core') ||
-                                 (cursorDistSq < 110 && Math.sin(clock * 5 + idx) > 0.4) ||
-                                 activeInScanSweep ||
-                                 shockwaveTriggered;
+        // For the EVU logo scene, we force all points to render as solid, beautiful square pixels to maximize legibility and boldness!
+        const selectTextSymbol = evuFactor > 0.05 
+          ? false 
+          : ((activeType === 'eye' && idx % 2 === 0) ||
+             (activeType === 'halo_crown' && idx % 4 === 0) ||
+             (activeType === 'singularity_core') ||
+             (cursorDistSq < 110 && Math.sin(clock * 5 + idx) > 0.4) ||
+             activeInScanSweep ||
+             shockwaveTriggered);
 
         // --- DRAWING WITH FULL REAL-TIME CHROMATIC ABERRATION CHROMATIC SPLITTING ---
         if (Math.abs(chromaticShiftX) > 0.4 || Math.abs(chromaticShiftY) > 0.4) {
-          // Color channel 1: RED (shifted left/up)
-          ctx.fillStyle = `rgba(${spectrum.r}, 0, 0, ${alpha})`;
-          if (selectTextSymbol && systemOnline) {
-            const fontScale = Math.max(5.5, Math.floor(9.0 * proj.scale));
-            ctx.font = `bold ${fontScale}px monospace`;
-            ctx.fillText(pt.char, proj.x - chromaticShiftX, proj.y - chromaticShiftY);
-          } else {
-            ctx.fillRect(proj.x - pointSize / 2 - chromaticShiftX, proj.y - pointSize / 2 - chromaticShiftY, pointSize, pointSize);
-          }
+          if (isEvuGlitchedNode) {
+            // Draw hollow stroking outlines (showing inner circuit board pathways)
+            ctx.strokeStyle = `rgba(${spectrum.r}, 0, 0, ${alpha})`;
+            ctx.lineWidth = 1.2;
+            ctx.strokeRect(proj.x - pointSize / 2 - chromaticShiftX, proj.y - pointSize / 2 - chromaticShiftY, pointSize, pointSize);
 
-          // Color channel 2: GREEN + BLUE = CYAN (shifted right/down)
-          ctx.fillStyle = `rgba(0, ${spectrum.g}, ${spectrum.b}, ${alpha})`;
-          if (selectTextSymbol && systemOnline) {
-            const fontScale = Math.max(5.5, Math.floor(9.0 * proj.scale));
-            ctx.font = `bold ${fontScale}px monospace`;
-            ctx.fillText(pt.char, proj.x + chromaticShiftX, proj.y + chromaticShiftY);
+            ctx.strokeStyle = `rgba(0, ${spectrum.g}, ${spectrum.b}, ${alpha})`;
+            ctx.lineWidth = 1.2;
+            ctx.strokeRect(proj.x - pointSize / 2 + chromaticShiftX, proj.y - pointSize / 2 + chromaticShiftY, pointSize, pointSize);
           } else {
-            ctx.fillRect(proj.x - pointSize / 2 + chromaticShiftX, proj.y - pointSize / 2 + chromaticShiftY, pointSize, pointSize);
+            // Color channel 1: RED (shifted left/up)
+            ctx.fillStyle = `rgba(${spectrum.r}, 0, 0, ${alpha})`;
+            if (selectTextSymbol && systemOnline) {
+              const fontScale = Math.max(5.5, Math.floor(9.0 * proj.scale));
+              ctx.font = `bold ${fontScale}px monospace`;
+              ctx.fillText(pt.char, proj.x - chromaticShiftX, proj.y - chromaticShiftY);
+            } else {
+              ctx.fillRect(proj.x - pointSize / 2 - chromaticShiftX, proj.y - pointSize / 2 - chromaticShiftY, pointSize, pointSize);
+            }
+
+            // Color channel 2: GREEN + BLUE = CYAN (shifted right/down)
+            ctx.fillStyle = `rgba(0, ${spectrum.g}, ${spectrum.b}, ${alpha})`;
+            if (selectTextSymbol && systemOnline) {
+              const fontScale = Math.max(5.5, Math.floor(9.0 * proj.scale));
+              ctx.font = `bold ${fontScale}px monospace`;
+              ctx.fillText(pt.char, proj.x + chromaticShiftX, proj.y + chromaticShiftY);
+            } else {
+              ctx.fillRect(proj.x - pointSize / 2 + chromaticShiftX, proj.y - pointSize / 2 + chromaticShiftY, pointSize, pointSize);
+            }
           }
         } 
         else {
@@ -1387,12 +1721,38 @@ export default function D3Hologram({
       ctx.textAlign = 'left';
       const sceneNames = [
         'HOLOMETRIC SCENE PROJECTION: ACTIVE_MATRIX_SKULL // CC-09',
+        'HOLOMETRIC ENTERPRISE INTEGRATION: EVU_SYMBOLIC_CORE // CC-EVU',
         'HOLOMETRIC SCENE PROJECTION: HYPERDIMENSIONAL_TESSERACT // CC-10',
+        'HOLOMETRIC ENTERPRISE INTEGRATION: EVU_SYMBOLIC_CORE // CC-EVU',
         'HOLOMETRIC SCENE PROJECTION: CELESTIAL_TORUS_KNOT // CC-11',
-        'HOLOMETRIC SCENE PROJECTION: QUANTUM_MATRIX_GLOBE // CC-12'
+        'HOLOMETRIC ENTERPRISE INTEGRATION: EVU_SYMBOLIC_CORE // CC-EVU',
+        'HOLOMETRIC SCENE PROJECTION: QUANTUM_MATRIX_GLOBE // CC-12',
+        'HOLOMETRIC ENTERPRISE INTEGRATION: EVU_SYMBOLIC_CORE // CC-EVU'
       ];
       const activeName = sceneNames[currentSceneRef.current];
       ctx.fillText(activeName, paddingEdge + 25, paddingEdge + 10);
+
+      // COMPOSITING ENERGETIC CHROMATIC ATMO-FLASH (Full screen camera strobe)
+      if (screenFlashIntensity > 0.015) {
+        const strobeTints = [
+          'rgba(255, 255, 255, ',  // White blinding lightning
+          'rgba(168, 85, 247, ',  // Neon purple surge
+          'rgba(34, 211, 238, ',  // Cyber cyan discharge
+          'rgba(244, 63, 94, '    // Crimson shockflash
+        ];
+        const selectedStrobe = strobeTints[Math.floor(clock * 14) % strobeTints.length];
+        
+        ctx.fillStyle = selectedStrobe + `${screenFlashIntensity * 0.38})`;
+        ctx.fillRect(0, 0, width, height);
+
+        // Drawing dynamic glitch scanlines on top of the flash
+        ctx.fillStyle = `rgba(255, 255, 255, ${screenFlashIntensity * 0.28})`;
+        for (let s = 0; s < 4; s++) {
+          const sliceH = 4 + Math.random() * 20;
+          const sliceY = Math.random() * height;
+          ctx.fillRect(0, sliceY, width, sliceH);
+        }
+      }
 
       frameId = requestAnimationFrame(render);
     };
@@ -1410,13 +1770,13 @@ export default function D3Hologram({
       container.removeEventListener('touchend', handleMouseLeave);
       container.removeEventListener('click', handleContainerClick);
     };
-  }, [intensify, systemOnline]);
+  }, [systemOnline]);
 
   return (
     <div
       id="martian-matrix-hologram-wrapper"
       ref={containerRef}
-      className="absolute inset-0 w-full h-full overflow-hidden pointer-events-auto z-0 bg-[#060509] cursor-crosshair select-none"
+      className="absolute inset-0 w-full h-full overflow-hidden pointer-events-auto z-0 bg-gradient-to-tr from-[#1d1645] via-[#110d29] to-[#14285c] cursor-crosshair select-none"
     >
       {/* Prime 3D Projection Canvas */}
       <canvas
@@ -1449,10 +1809,12 @@ export default function D3Hologram({
 
 
 
-      {/* Subtle colorful neon blur emitter elements representing atmospheric auras */}
-      <div className="absolute top-[28%] left-[24%] w-[38vw] h-[38vw] max-w-[250px] max-h-[250px] rounded-full bg-purple-600/5 filter blur-[115px] pointer-events-none z-0 animate-pulse" />
-      <div className="absolute top-[34%] left-[20%] w-[32vw] h-[32vw] max-w-[200px] max-h-[200px] rounded-full bg-cyan-500/5 filter blur-[95px] pointer-events-none z-0 animate-pulse" />
-      <div className="absolute top-[40%] left-[28%] w-[28vw] h-[28vw] max-w-[180px] max-h-[180px] rounded-full bg-rose-500/5 filter blur-[105px] pointer-events-none z-0 animate-pulse" />
+      {/* Enhanced vibrant colorful neon ambient glows to support active matrix styling */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-purple-600/22 filter blur-[140px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '8s' }} />
+      <div className="absolute top-[-15%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-indigo-500/24 filter blur-[150px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '11s' }} />
+      <div className="absolute top-[25%] left-[5%] w-[45vw] h-[45vw] rounded-full bg-cyan-500/20 filter blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '14s' }} />
+      <div className="absolute top-[35%] right-[5%] w-[40vw] h-[40vw] rounded-full bg-emerald-500/18 filter blur-[130px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '9s' }} />
+      <div className="absolute bottom-[-15%] left-[25%] w-[50vw] h-[50vw] rounded-full bg-rose-500/20 filter blur-[150px] pointer-events-none z-0 animate-pulse" style={{ animationDuration: '12s' }} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Sparkles, Copy, Check, Eye, Sliders, RotateCcw, Power, Zap, Radio, Mail, Lock } from 'lucide-react';
 import D3Hologram from '@/components/D3Hologram';
@@ -19,8 +19,96 @@ export default function Home() {
 
   // Dynamic D3Hologram interactive customization states
   const [globalColorShift, setGlobalColorShift] = useState(0);
-  const [speedFactor, setSpeedFactor] = useState(1.0);
+  const [speedFactor, setSpeedFactor] = useState(0.5);
   const [particleSizeScale, setParticleSizeScale] = useState(1.0);
+
+  // Volumetric 3D interaction state for the large word logo
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
+  // Logo glitch effect states
+  const [glitchActive, setGlitchActive] = useState(false);
+  const [glitchShiftX, setGlitchShiftX] = useState(0);
+  const [glitchShiftY, setGlitchShiftY] = useState(0);
+  const [glitchAlpha, setGlitchAlpha] = useState(1.0);
+  const [glitchedText, setGlitchedText] = useState('holograph');
+
+  useEffect(() => {
+    // Periodically trigger a super cybernetic glitch flourish!
+    const triggerGlitch = () => {
+      setGlitchActive(true);
+      
+      let frame = 0;
+      const originalText = 'holograph';
+      const glitchChars = '01#_/[?]\\$%&@xXOo';
+      
+      const interval = setInterval(() => {
+        frame++;
+        
+        // Randomly split slices, apply horizontal/vertical offsets, shift alpha, and alter text characters
+        setGlitchShiftX((Math.random() - 0.5) * 16);
+        setGlitchShiftY((Math.random() - 0.5) * 6);
+        setGlitchAlpha(0.35 + Math.random() * 0.65);
+        
+        // Character swapping
+        if (Math.random() < 0.45) {
+          const charsArr = originalText.split('');
+          const numSwaps = Math.floor(Math.random() * 3) + 1;
+          for (let i = 0; i < numSwaps; i++) {
+            const idxToSwap = Math.floor(Math.random() * charsArr.length);
+            charsArr[idxToSwap] = glitchChars[Math.floor(Math.random() * glitchChars.length)];
+          }
+          setGlitchedText(charsArr.join(''));
+        } else {
+          setGlitchedText(originalText);
+        }
+
+        if (frame > 7) {
+          clearInterval(interval);
+          setGlitchActive(false);
+          setGlitchShiftX(0);
+          setGlitchShiftY(0);
+          setGlitchAlpha(1.0);
+          setGlitchedText(originalText);
+        }
+      }, 45);
+    };
+
+    // Trigger glitch every 2.5 to 5 seconds randomly
+    const scheduler = () => {
+      const delay = 2200 + Math.random() * 3500;
+      return setTimeout(() => {
+        triggerGlitch();
+        timerId = scheduler();
+      }, delay);
+    };
+
+    let timerId = scheduler();
+    return () => clearTimeout(timerId);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 2; // Range [-1, 1]
+      const y = (e.clientY / window.innerHeight - 0.5) * 2; // Range [-1, 1]
+      setMousePosition({ x, y });
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
+        const x = (touch.clientX / window.innerWidth - 0.5) * 2;
+        const y = (touch.clientY / window.innerHeight - 0.5) * 2;
+        setMousePosition({ x, y });
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, []);
 
   const handleSubmitCode = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,8 +117,22 @@ export default function Home() {
     setStatus('authorizing');
 
     setTimeout(() => {
-      // Deactivated validation: no words will ever grant access
-      setStatus('error');
+      const code = accessCode.trim().toUpperCase();
+      const isAccepted = [
+        'HOLO-BETA-2026',
+        'EVU-INVITE-2026',
+        'WAVEFRONT',
+        'HOLOGRAPH',
+        'EVU',
+        'INVITE',
+        'BETA'
+      ].includes(code) || code.startsWith('HOLO-') || code.startsWith('EVU-');
+
+      if (isAccepted) {
+        setStatus('success');
+      } else {
+        setStatus('error');
+      }
     }, 1200);
   };
 
@@ -51,7 +153,7 @@ export default function Home() {
   };
 
   return (
-    <main className="relative flex flex-col justify-between items-center w-full min-h-screen bg-[#100f13] px-4 sm:px-8 text-neutral-100 overflow-hidden">
+    <main className="relative flex flex-col justify-between items-center w-full min-h-screen bg-gradient-to-tr from-[#2d236b] via-[#1d1645] to-[#203c8c] px-4 sm:px-8 text-neutral-100 overflow-hidden">
       
       {/* Dynamic Aesthetic Holographic Network */}
       <D3Hologram
@@ -62,7 +164,7 @@ export default function Home() {
       />
 
       {/* Retro CRT Phosphor Vignette Shadowing */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(16,15,19,0.95)_100%)] pointer-events-none z-[1]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(28,24,42,0.45)_100%)] pointer-events-none z-[1]" />
 
       {/* Header bar */}
       <header className="relative w-full max-w-6xl flex justify-between items-center pt-8 z-10 select-none">
@@ -78,292 +180,397 @@ export default function Home() {
       </header>
 
       {/* Center Console Portal */}
-      <div className={`relative flex flex-col justify-center items-center w-full flex-1 z-10 py-12 text-center transition-all duration-700 ${status === 'success' ? 'max-w-3xl' : 'max-w-xl'}`}>
+      <div className="relative flex flex-col justify-start items-center w-full flex-1 z-10 pt-2 md:pt-4 lg:pt-6 pb-6 text-center pointer-events-none">
         
         {/* Crisp Monospaced Logo Statement */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.2, ease: 'easeOut' }}
-          className="mb-10 select-none px-10 py-8 rounded-2xl bg-[#121115]/30 backdrop-blur-[3px] border border-neutral-800/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.03),0_12px_35px_rgba(0,0,0,0.6)]"
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.5, ease: 'easeOut' }}
+          className="select-none pointer-events-auto flex items-center justify-center"
+          style={{
+            perspective: '1200px',
+            transformStyle: 'preserve-3d',
+          }}
         >
-          <h1 className="font-sans font-black text-5xl sm:text-6xl md:text-7xl tracking-[0.3em] text-white uppercase leading-none filter drop-shadow-[0_2px_15px_rgba(255,255,255,0.12)]">
-            HOLOGRAPH
-          </h1>
-          <p className="font-mono text-[10px] sm:text-xs tracking-[0.35em] text-emerald-400/90 mt-5 uppercase">
-            &lt; Reality is a medium &gt;
-          </p>
-        </motion.div>
-
-        {/* Dynamic Interactive Window */}
-        <div className="w-full min-h-[170px] flex items-center justify-center mt-3">
-          <AnimatePresence mode="wait">
+          <motion.div
+            style={{
+              transformStyle: 'preserve-3d',
+              filter: 'drop-shadow(0 15px 35px rgba(0,0,0,0.5)) drop-shadow(0 30px 75px rgba(16,185,129,0.02))',
+            }}
+            animate={{
+              rotateX: -mousePosition.y * 18, // slightly tighter spring tilt for premium feel
+              rotateY: mousePosition.x * 22,
+              z: 140, // separates glass float plate in 3D perspective
+            }}
+            transition={{ type: 'spring', stiffness: 95, damping: 24, mass: 0.5 }}
+            className="relative px-12 py-12 flex items-center justify-center"
+          >
+            {/* Ambient Glass Scanning Lights & Cyber Scanlines clipped near the text */}
+            <div 
+              className="absolute inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/15 to-transparent opacity-70"
+              style={{
+                top: glitchActive ? `${glitchShiftY * 10 + 50}%` : '35%',
+                transition: glitchActive ? 'none' : 'top 4.5s ease-in-out',
+                animation: glitchActive ? 'none' : 'pulse 2.5s infinite',
+              }}
+            />
             
-            {status === 'success' ? (
-              <motion.div
-                key="granted"
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
-                className="w-full bg-black/95 border border-emerald-500/40 shadow-[0_0_25px_rgba(16,185,129,0.25)] rounded-xl p-5 sm:p-7 backdrop-blur-md text-left"
-              >
-                {/* Header Section */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-emerald-500/20 pb-4 mb-5">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <h2 className="font-mono text-xs tracking-[0.2em] text-white uppercase font-bold">
-                        HOLOGRAPHIC SYS // CC-09
-                      </h2>
-                    </div>
-                    <p className="font-mono text-[9px] tracking-[0.1em] text-neutral-400 mt-1">
-                      ESTABLISHED CONNECTION VIA ACCESS_KEY: {accessCode.toUpperCase() || 'EXTERNAL'}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setStatus('idle');
-                      setAccessCode('');
-                      setGlobalColorShift(0);
-                      setSpeedFactor(1.0);
-                      setParticleSizeScale(1.0);
-                    }}
-                    className="mt-3 sm:mt-0 flex items-center gap-2 px-3 py-1.5 rounded border border-rose-500/30 hover:bg-rose-950/20 text-rose-400 hover:text-rose-300 font-mono text-[9px] tracking-[0.2em] uppercase transition-all duration-200 cursor-pointer"
-                  >
-                    <Power className="w-3 h-3" />
-                    DISCONNECT
-                  </button>
-                </div>
+            {/* 1. Glass Shadow Layer - Depth backing via light edge shadow */}
+            <span
+              className="absolute inset-0 flex items-center justify-center font-mono font-medium text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-[0.25em] lowercase leading-none select-none text-transparent filter blur-[0.6px]"
+              style={{
+                transform: 'translateZ(-12px) translateY(2.5px)',
+                pointerEvents: 'none',
+                WebkitTextStroke: '1px rgba(0, 0, 0, 0.4)',
+              }}
+            >
+              {glitchedText}
+            </span>
 
-                {/* Spatial Preset Buttons */}
-                <div className="mb-5 bg-emerald-950/10 border border-emerald-500/15 rounded-lg p-3">
-                  <span className="block font-mono text-[9px] tracking-[0.15em] text-emerald-400/80 mb-2.5 uppercase font-bold">
-                    SELECT INTERACTIVE GEOMETRIC DYNAMIC PRESET
-                  </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {[
-                      { id: 'standard', label: 'STANDARD MODE', shift: 0, speed: 1.0, scale: 1.0 },
-                      { id: 'quantum', label: 'QUANTUM NOIRE', shift: 275, speed: 0.45, scale: 1.5 },
-                      { id: 'hyper', label: 'WARP STREAM', shift: 190, speed: 2.2, scale: 1.9 },
-                      { id: 'amber', label: 'RETRO CHRONOS', shift: 32, speed: 1.3, scale: 0.8 },
-                    ].map((preset) => (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => {
-                          setGlobalColorShift(preset.shift);
-                          setSpeedFactor(preset.speed);
-                          setParticleSizeScale(preset.scale);
-                        }}
-                        className={`px-2.5 py-2 rounded text-[9px] font-mono tracking-wider text-center uppercase border transition-all duration-300 cursor-pointer ${
-                          globalColorShift === preset.shift &&
-                          speedFactor === preset.speed &&
-                          particleSizeScale === preset.scale
-                            ? 'bg-emerald-500/15 border-emerald-400 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.15)] font-bold'
-                            : 'bg-black/50 border-neutral-800 hover:border-emerald-500/40 text-neutral-400 hover:text-emerald-400'
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+            {/* 2. Pristine Emerald Soft Backglow halo (edge-glow) */}
+            <span
+              className="absolute inset-0 flex items-center justify-center font-mono font-medium text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-[0.25em] lowercase leading-none select-none text-transparent filter blur-md"
+              style={{
+                transform: 'translateZ(-10px) translateY(1px)',
+                pointerEvents: 'none',
+                WebkitTextStroke: '1.5px rgba(16, 185, 129, 0.15)',
+              }}
+            >
+              {glitchedText}
+            </span>
 
-                {/* Main Sliders and Controls Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  {/* Slider 1: Hue Rotation */}
-                  <div className="space-y-2.5">
-                    <div className="flex justify-between items-center">
-                      <label className="font-mono text-[9px] tracking-[0.15em] text-emerald-500/80 uppercase font-bold flex items-center gap-1.5">
-                        <Sliders className="w-3 h-3 text-emerald-400" />
-                        SPECTRAL HUE
-                      </label>
-                      <span className="font-mono text-[9px] text-neutral-400 font-bold">
-                        {globalColorShift}°
-                      </span>
-                    </div>
-                    <div className="h-9 relative flex items-center px-2 bg-black/60 rounded border border-emerald-500/10">
-                      <input
-                        type="range"
-                        min="0"
-                        max="360"
-                        value={globalColorShift}
-                        onChange={(e) => setGlobalColorShift(Number(e.target.value))}
-                        className="w-full accent-emerald-500 h-1 bg-neutral-900 rounded appearance-none cursor-pointer"
-                      />
-                    </div>
-                    <div className="flex justify-between text-[8px] font-mono text-neutral-500">
-                      <span>0° (EMERALD)</span>
-                      <span>180° (CYAN)</span>
-                      <span>360°</span>
-                    </div>
-                  </div>
+            {/* 3. Refracted Prism Channel - Cyan Channel (Chroma Shift) */}
+            <span
+              className="absolute inset-0 flex items-center justify-center font-mono font-medium text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-[0.25em] lowercase leading-none select-none text-transparent filter blur-[0.4px]"
+              style={{
+                transform: `translateZ(2px) translateX(${glitchShiftX + (mousePosition.x * 2.5)}px) translateY(${glitchShiftY + (mousePosition.y * 1)}px)`,
+                pointerEvents: 'none',
+                mixBlendMode: 'screen',
+                WebkitTextStroke: '0.6px rgba(34, 211, 238, 0.45)',
+              }}
+            >
+              {glitchedText}
+            </span>
 
-                  {/* Slider 2: Oscillation Speed */}
-                  <div className="space-y-2.5">
-                    <div className="flex justify-between items-center">
-                      <label className="font-mono text-[9px] tracking-[0.15em] text-emerald-500/80 uppercase font-bold flex items-center gap-1.5">
-                        <Zap className="w-3 h-3 text-emerald-400" />
-                        TEMPORAL DRIFT
-                      </label>
-                      <span className="font-mono text-[9px] text-neutral-400 font-bold">
-                        {speedFactor.toFixed(2)}x
-                      </span>
-                    </div>
-                    <div className="h-9 relative flex items-center px-2 bg-black/60 rounded border border-emerald-500/10">
-                      <input
-                        type="range"
-                        min="0.1"
-                        max="3.5"
-                        step="0.05"
-                        value={speedFactor}
-                        onChange={(e) => setSpeedFactor(Number(e.target.value))}
-                        className="w-full accent-emerald-500 h-1 bg-neutral-900 rounded appearance-none cursor-pointer"
-                      />
-                    </div>
-                    <div className="flex justify-between text-[8px] font-mono text-neutral-500">
-                      <span>0.10x (SLOW)</span>
-                      <span>1.0x (STD)</span>
-                      <span>3.5x (FAST)</span>
-                    </div>
-                  </div>
+            {/* 4. Refracted Prism Channel - Red Channel (Opposing Chroma Shift) */}
+            <span
+              className="absolute inset-0 flex items-center justify-center font-mono font-medium text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-[0.25em] lowercase leading-none select-none text-transparent filter blur-[0.4px]"
+              style={{
+                transform: `translateZ(3px) translateX(${glitchShiftX - (mousePosition.x * 2.5) - 0.5}px) translateY(${glitchShiftY - (mousePosition.y * 1) - 0.2}px)`,
+                pointerEvents: 'none',
+                mixBlendMode: 'screen',
+                WebkitTextStroke: '0.6px rgba(244, 63, 94, 0.45)',
+              }}
+            >
+              {glitchedText}
+            </span>
 
-                  {/* Slider 3: Particle Scale */}
-                  <div className="space-y-2.5">
-                    <div className="flex justify-between items-center">
-                      <label className="font-mono text-[9px] tracking-[0.15em] text-emerald-500/80 uppercase font-bold flex items-center gap-1.5">
-                        <Radio className="w-3 h-3 text-emerald-400" />
-                        PARTICLE SIZE
-                      </label>
-                      <span className="font-mono text-[9px] text-neutral-400 font-bold">
-                        {particleSizeScale.toFixed(2)}x
-                      </span>
-                    </div>
-                    <div className="h-9 relative flex items-center px-2 bg-black/60 rounded border border-emerald-500/10">
-                      <input
-                        type="range"
-                        min="0.4"
-                        max="2.5"
-                        step="0.05"
-                        value={particleSizeScale}
-                        onChange={(e) => setParticleSizeScale(Number(e.target.value))}
-                        className="w-full accent-emerald-500 h-1 bg-neutral-900 rounded appearance-none cursor-pointer"
-                      />
-                    </div>
-                    <div className="flex justify-between text-[8px] font-mono text-neutral-500">
-                      <span>0.4x (MICRO)</span>
-                      <span>1.0x (STD)</span>
-                      <span>2.5x (MAX)</span>
-                    </div>
-                  </div>
-                </div>
+            {/* 5. Crystalline Facet Outer Boundary Stroke (Fine Edge highlight) */}
+            <span
+              className="absolute inset-0 flex items-center justify-center font-mono font-medium text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-[0.25em] lowercase leading-none select-none text-transparent"
+              style={{
+                transform: 'translateZ(6px)',
+                pointerEvents: 'none',
+                WebkitTextStroke: '1px rgba(255, 255, 255, 0.25)',
+              }}
+            >
+              {glitchedText}
+            </span>
 
-                {/* Dynamic Hint Interactive Footer */}
-                <div className="mt-5 pt-4 border-t border-emerald-500/10 flex flex-col sm:flex-row justify-between items-center gap-3">
-                  <p className="font-mono text-[9px] tracking-[0.05em] text-emerald-400/80 leading-relaxed uppercase">
-                    ⚡ DIRECT ACTION ARMED: CLICK ANYWHERE ON MATRIX BACKGROUND TO EMIT GRAVITY SHOCKWAVES.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setGlobalColorShift(0);
-                      setSpeedFactor(1.0);
-                      setParticleSizeScale(1.0);
-                    }}
-                    className="flex items-center gap-1 text-[8px] font-mono text-neutral-400 hover:text-white bg-neutral-950 hover:bg-neutral-900 px-2.5 py-1.5 rounded transition-all cursor-pointer border border-neutral-800"
-                  >
-                    <RotateCcw className="w-2.5 h-2.5" />
-                    RESET PROTOCOLS
-                  </button>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="form-container"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="w-full"
-              >
-                <form id="access-code-form" onSubmit={handleSubmitCode} className="w-full max-w-sm mx-auto px-4">
-                  <div className="relative flex items-center p-1.5 bg-black/90 border border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.15)] rounded-lg focus-within:border-emerald-400 transition-colors duration-300">
-                    <input
-                      id="passcode-input"
-                      type="text"
-                      required
-                      disabled={status === 'authorizing'}
-                      placeholder="ENTER ACCESS CODE"
-                      value={accessCode}
-                      onChange={(e) => setAccessCode(e.target.value)}
-                      className="flex-1 bg-transparent px-3 py-2.5 text-xs text-emerald-400 font-semibold tracking-widest font-mono focus:outline-none placeholder-emerald-800 uppercase caret-emerald-400"
-                    />
-                    <button
-                      id="submit-code-btn"
-                      type="submit"
-                      disabled={status === 'authorizing'}
-                      className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold px-5 py-2.5 rounded font-mono text-[10px] tracking-widest uppercase transition-colors"
-                    >
-                      {status === 'authorizing' ? 'VERIFYING...' : 'ENTER'}
-                    </button>
-                  </div>
+            {/* 6. Primary Translucent Frost Glass Core plate (Glows and blurs internally) */}
+            <h1
+              className="font-mono font-medium text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-[0.25em] lowercase leading-none bg-clip-text text-transparent bg-gradient-to-b from-white/15 via-white/3 to-transparent drop-shadow-[0_2px_15px_rgba(255,255,255,0.05)]"
+              style={{
+                transform: `translateZ(10px) translateX(${glitchShiftX * 0.1}px) translateY(${glitchShiftY * 0.1}px)`,
+                opacity: glitchAlpha,
+                WebkitTextStroke: '1.2px rgba(255, 255, 255, 0.65)',
+              }}
+            >
+              {glitchedText}
+            </h1>
 
-                  {status === 'error' && (
-                    <motion.p
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="text-[9px] font-mono tracking-widest text-[#f43f5e] mt-4.5 uppercase font-bold"
-                    >
-                      * ACCESS DENIED. INVALID SIGNATURE SEQUENCE.
-                    </motion.p>
-                  )}
-                </form>
-              </motion.div>
-            )}
+            {/* 7. Glass Face Specular Glare (Light Reflection Sweep that drifts on mouse move) */}
+            <span
+              className="absolute inset-0 flex items-center justify-center font-mono font-medium text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-[0.25em] lowercase leading-none select-none text-transparent bg-gradient-to-tr from-transparent via-transparent via-white/10 via-white/45 via-transparent to-transparent bg-clip-text opacity-90"
+              style={{
+                transform: `translateZ(14px) translateX(${mousePosition.x * 4}px) translateY(${mousePosition.y * 4}px)`,
+                pointerEvents: 'none',
+                WebkitTextStroke: '0.4px rgba(255, 255, 255, 0.45)',
+              }}
+            >
+              {glitchedText}
+            </span>
 
-          </AnimatePresence>
-        </div>
-
+            {/* 8. Extra Fine Crystal Polishing Highlight Stroke */}
+            <span
+              className="absolute inset-0 flex items-center justify-center font-mono font-medium text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-[0.25em] lowercase leading-none select-none text-transparent"
+              style={{
+                transform: 'translateZ(17px)',
+                pointerEvents: 'none',
+                WebkitTextStroke: '0.4px rgba(255, 255, 255, 0.7)',
+              }}
+            >
+              {glitchedText}
+            </span>
+          </motion.div>
+        </motion.div>
       </div>
 
-      {/* Footer Branding Citation */}
-      <footer className="relative w-full text-center pb-12 z-10 select-none">
-        <a
-          id="evu-hyperlink"
-          href="https://www.evu.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-baseline gap-2.5 px-10 py-5 rounded-full bg-neutral-950/95 border border-white/15 hover:border-white/35 hover:bg-neutral-900/40 text-white font-mono text-sm sm:text-base tracking-[0.25em] font-bold uppercase transition-all duration-300 shadow-[0_4px_25px_rgba(0,0,0,0.8)] cursor-pointer"
-        >
-          <span className="leading-none select-none">coming soon from</span>
-          <svg
-            className="w-auto text-white shrink-0 align-baseline select-none"
-            style={{ height: '0.72em' }}
-            viewBox="5 10 138.75 39.75"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <rect x="5" y="10" width="38" height="9.5" rx="4.5" fill="currentColor" />
-            <rect x="5" y="24" width="26" height="9.5" rx="4.5" fill="currentColor" />
-            <rect x="5" y="38" width="38" height="9.5" rx="4.5" fill="currentColor" />
-            <path
-              d="M 55,14.75 L 75,41 L 95,14.75"
-              stroke="currentColor"
-              strokeWidth="9.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-            <path
-              d="M 111,14.75 L 111,31 A 14,14 0 0 0 139,31 L 139,14.75"
-              stroke="currentColor"
-              strokeWidth="9.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-          </svg>
-        </a>
-      </footer>
+      {/* Bottom Interface Control Space */}
+      <div className="relative w-full max-w-3xl mx-auto px-4 pb-12 z-10 flex flex-col items-center">
+        <AnimatePresence mode="wait">
+          
+          {status === 'success' ? (
+            <motion.div
+              key="granted"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 15 }}
+              transition={{ duration: 0.5 }}
+              className="w-full bg-black/90 border border-emerald-500/30 shadow-[0_8px_30px_rgba(16,185,129,0.15)] rounded-xl p-5 sm:p-6 backdrop-blur-md text-left mb-6"
+            >
+              {/* Header Section */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-neutral-900 pb-3 mb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <h2 className="font-mono text-[10px] tracking-[0.2em] text-white uppercase font-bold">
+                      SYSTEM CALIBRATION
+                    </h2>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setStatus('idle');
+                    setAccessCode('');
+                    setGlobalColorShift(0);
+                    setSpeedFactor(1.0);
+                    setParticleSizeScale(1.0);
+                  }}
+                  className="mt-2 sm:mt-0 flex items-center gap-1.5 px-2 py-1 rounded border border-rose-500/20 hover:bg-rose-950/20 text-rose-400 font-mono text-[8px] tracking-[0.2em] uppercase transition-all duration-200 cursor-pointer"
+                >
+                  <Power className="w-2.5 h-2.5" />
+                  DISCONNECT
+                </button>
+              </div>
+
+              {/* Spatial Preset Buttons */}
+              <div className="mb-4 bg-neutral-950/50 border border-neutral-900 rounded-lg p-2.5">
+                <span className="block font-mono text-[8px] tracking-[0.15em] text-emerald-400 mb-2 uppercase font-medium">
+                  SPECTRAL GEOMETRIC PRESET
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  {[
+                    { id: 'standard', label: 'STANDARD MODE', shift: 0, speed: 0.5, scale: 1.0 },
+                    { id: 'quantum', label: 'QUANTUM NOIRE', shift: 275, speed: 0.22, scale: 1.5 },
+                    { id: 'warp', label: 'WARP STREAM', shift: 190, speed: 1.1, scale: 1.9 },
+                    { id: 'amber', label: 'RETRO CHRONOS', shift: 32, speed: 0.65, scale: 0.8 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => {
+                        setGlobalColorShift(preset.shift);
+                        setSpeedFactor(preset.speed);
+                        setParticleSizeScale(preset.scale);
+                      }}
+                      className={`px-2 py-1.5 rounded text-[8px] font-mono tracking-wider text-center uppercase border transition-all duration-300 cursor-pointer ${
+                        globalColorShift === preset.shift &&
+                        speedFactor === preset.speed &&
+                        particleSizeScale === preset.scale
+                          ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 font-bold'
+                          : 'bg-black/45 border-neutral-900 hover:border-neutral-800 text-neutral-400 hover:text-white'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Main Sliders and Controls Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Slider 1: Hue Rotation */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="font-mono text-[8px] tracking-[0.15em] text-neutral-400 uppercase font-bold flex items-center gap-1">
+                      <Sliders className="w-2.5 h-2.5 text-emerald-400" />
+                      SPECTRAL HUE
+                    </label>
+                    <span className="font-mono text-[8px] text-neutral-400">
+                      {globalColorShift}°
+                    </span>
+                  </div>
+                  <div className="h-7 relative flex items-center px-2 bg-black/50 rounded border border-neutral-900">
+                    <input
+                      type="range"
+                      min="0"
+                      max="360"
+                      value={globalColorShift}
+                      onChange={(e) => setGlobalColorShift(Number(e.target.value))}
+                      className="w-full accent-emerald-500 h-1 bg-neutral-950 rounded appearance-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Slider 2: Oscillation Speed */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="font-mono text-[8px] tracking-[0.15em] text-neutral-400 uppercase font-bold flex items-center gap-1">
+                      <Zap className="w-2.5 h-2.5 text-emerald-500" />
+                      TEMPORAL DRIFT
+                    </label>
+                    <span className="font-mono text-[8px] text-neutral-400">
+                      {speedFactor.toFixed(2)}x
+                    </span>
+                  </div>
+                  <div className="h-7 relative flex items-center px-2 bg-black/50 rounded border border-neutral-900">
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="3.5"
+                      step="0.05"
+                      value={speedFactor}
+                      onChange={(e) => setSpeedFactor(Number(e.target.value))}
+                      className="w-full accent-emerald-500 h-1 bg-neutral-950 rounded appearance-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Slider 3: Particle Scale */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="font-mono text-[8px] tracking-[0.15em] text-neutral-400 uppercase font-bold flex items-center gap-1">
+                      <Radio className="w-2.5 h-2.5 text-emerald-500" />
+                      PARTICLE SIZE
+                    </label>
+                    <span className="font-mono text-[8px] text-neutral-400">
+                      {particleSizeScale.toFixed(2)}x
+                    </span>
+                  </div>
+                  <div className="h-7 relative flex items-center px-2 bg-black/50 rounded border border-neutral-900">
+                    <input
+                      type="range"
+                      min="0.4"
+                      max="2.5"
+                      step="0.05"
+                      value={particleSizeScale}
+                      onChange={(e) => setParticleSizeScale(Number(e.target.value))}
+                      className="w-full accent-emerald-500 h-1 bg-neutral-950 rounded appearance-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Reset trigger */}
+              <div className="mt-4 pt-3 border-t border-neutral-900 flex justify-between items-center text-[8px]">
+                <span className="font-mono text-neutral-500 uppercase tracking-widest leading-none select-none">
+                  interactive spatial parameters active
+                </span>
+                <button
+                  onClick={() => {
+                    setGlobalColorShift(0);
+                    setSpeedFactor(1.0);
+                    setParticleSizeScale(1.0);
+                  }}
+                  className="flex items-center gap-1 font-mono text-neutral-400 hover:text-white transition-all cursor-pointer"
+                >
+                  <RotateCcw className="w-2 h-2" />
+                  RESET SYSTEM
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="unauthorized"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 15 }}
+              transition={{ duration: 0.5 }}
+              className="w-full max-w-xs mb-6 px-4"
+            >
+              <form id="access-code-form" onSubmit={handleSubmitCode} className="w-full">
+                <div className="relative flex items-center p-1 bg-black/85 border border-neutral-800 rounded focus-within:border-emerald-500/40 transition-colors duration-300">
+                  <input
+                    id="passcode-input"
+                    type="text"
+                    required
+                    disabled={status === 'authorizing'}
+                    placeholder="ENTER INVITE CODE"
+                    value={accessCode}
+                    onChange={(e) => setAccessCode(e.target.value)}
+                    className="flex-1 bg-transparent px-3 py-2 text-[10px] text-emerald-400 font-semibold tracking-widest font-mono focus:outline-none placeholder-neutral-700 uppercase caret-emerald-400"
+                  />
+                  <button
+                    id="submit-code-btn"
+                    type="submit"
+                    disabled={status === 'authorizing'}
+                    className="bg-neutral-900 hover:bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:border-emerald-500/40 font-semibold px-4 py-2 rounded font-mono text-[9px] tracking-widest uppercase transition-colors"
+                  >
+                    {status === 'authorizing' ? 'CONNECTING...' : 'ENTER'}
+                  </button>
+                </div>
+
+                {status === 'error' && (
+                  <motion.p
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-[9px] font-mono tracking-widest text-[#f43f5e] mt-2.5 text-center uppercase font-bold"
+                  >
+                    * INVALID CODE SEQUENCE. ACCESS DENIED.
+                  </motion.p>
+                )}
+              </form>
+            </motion.div>
+          )}
+
+        </AnimatePresence>
+
+        {/* Footer Link / EVU logo */}
+        <footer className="w-full text-center select-none pt-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <span className="font-mono text-[9px] tracking-[0.2em] text-neutral-500 uppercase">
+              PRIVATE BETA VIA
+            </span>
+            <a
+              id="evu-hyperlink"
+              href="https://www.holograph.cc"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex hover:opacity-80 transition-opacity"
+            >
+              <svg
+                className="w-auto text-emerald-400 shrink-0 select-none"
+                style={{ height: '0.68em' }}
+                viewBox="5 10 138.75 39.75"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect x="5" y="10" width="38" height="9.5" rx="4.5" fill="currentColor" />
+                <rect x="5" y="24" width="26" height="9.5" rx="4.5" fill="currentColor" />
+                <rect x="5" y="38" width="38" height="9.5" rx="4.5" fill="currentColor" />
+                <path
+                  d="M 55,14.75 L 75,41 L 95,14.75"
+                  stroke="currentColor"
+                  strokeWidth="9.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+                <path
+                  d="M 111,14.75 L 111,31 A 14,14 0 0 0 139,31 L 139,14.75"
+                  stroke="currentColor"
+                  strokeWidth="9.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+              </svg>
+            </a>
+          </div>
+        </footer>
+      </div>
 
       {/* Subtle Stealth Legal Nodes in bottom left corner */}
       <div 

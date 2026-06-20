@@ -17,14 +17,14 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: 'HOLOGRAPH | Reality is a medium.',
   description: 'A stealth-mode spatial technology enterprise interface.',
-  metadataBase: new URL('https://www.evu.com'),
+  metadataBase: new URL('https://www.holograph.cc'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: 'HOLOGRAPH | Reality is a medium.',
     description: 'A stealth-mode spatial technology enterprise interface.',
-    url: 'https://www.evu.com',
+    url: 'https://www.holograph.cc',
     siteName: 'EVU HOLOGRAPH',
     type: 'website',
   },
@@ -45,8 +45,8 @@ export default function RootLayout({
       '@context': 'https://schema.org',
       '@type': 'Organization',
       'name': 'EVU',
-      'url': 'https://www.evu.com',
-      'logo': 'https://www.evu.com/logo.png',
+      'url': 'https://www.holograph.cc',
+      'logo': 'https://www.holograph.cc/logo.png',
       'description': 'EVU is a stealth-mode spatial technology enterprise constructing holographic interfaces and next-generation interactive systems.',
       'knowsAbout': ['Spatial Computing', 'Holographic Interfaces', 'Interactive Systems', 'Quantum Hardware', 'Human-Computer Interaction'],
     },
@@ -55,7 +55,7 @@ export default function RootLayout({
       '@type': 'WebSite',
       'name': 'EVU HOLOGRAPH',
       'alternateName': ['EVU', 'HOLOGRAPH'],
-      'url': 'https://www.evu.com',
+      'url': 'https://www.holograph.cc',
     }
   ];
 
