@@ -1,22 +1,29 @@
-import type { MetadataRoute } from 'next';
+import { MetadataRoute } from 'next';
 import { holographicPages } from '@/lib/holographic-data';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://www.holograph.cc';
+  const currentDate = new Date();
 
-  const mainPages = [
+  const mainPages: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: 'weekly' as const,
+      lastModified: currentDate,
+      changeFrequency: 'weekly',
       priority: 1.0,
-    }
+    },
+    {
+      url: `${baseUrl}/tech`,
+      lastModified: currentDate,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
   ];
 
-  const techPages = holographicPages.map((page) => ({
+  const techPages: MetadataRoute.Sitemap = holographicPages.map((page) => ({
     url: `${baseUrl}/tech/${page.slug}`,
-    lastModified: new Date(),
-    changeFrequency: 'monthly' as const,
+    lastModified: currentDate,
+    changeFrequency: 'monthly',
     priority: 0.8,
   }));
 

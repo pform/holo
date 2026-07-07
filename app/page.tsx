@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Sparkles, Copy, Check, Eye, Sliders, RotateCcw, Power, Zap, Radio, Mail, Lock } from 'lucide-react';
 import D3Hologram from '@/components/D3Hologram';
@@ -153,7 +154,7 @@ export default function Home() {
   };
 
   return (
-    <main className="relative flex flex-col justify-between items-center w-full min-h-screen bg-gradient-to-tr from-[#2d236b] via-[#1d1645] to-[#203c8c] px-4 sm:px-8 text-neutral-100 overflow-hidden">
+    <main className="relative flex flex-col justify-between items-center w-full min-h-screen bg-gradient-to-tr from-[#4f46e5] via-[#7c3aed] to-[#06b6d4] px-4 sm:px-8 text-neutral-100 overflow-hidden">
       
       {/* Dynamic Aesthetic Holographic Network */}
       <D3Hologram
@@ -171,12 +172,20 @@ export default function Home() {
         <span className="font-mono text-xs tracking-[0.25em] text-neutral-300 font-medium">
           holograph.cc
         </span>
-        <button
-          onClick={() => setShowAbout(true)}
-          className="text-[10px] font-mono tracking-[0.25em] text-emerald-400/80 hover:text-white font-semibold uppercase transition-colors"
-        >
-          [ ABOUT ]
-        </button>
+        <div className="flex items-center gap-6">
+          <Link
+            href="/tech"
+            className="text-[10px] font-mono tracking-[0.25em] text-neutral-400 hover:text-emerald-400 font-semibold uppercase transition-colors"
+          >
+            [ TECH INDEX ]
+          </Link>
+          <button
+            onClick={() => setShowAbout(true)}
+            className="text-[10px] font-mono tracking-[0.25em] text-emerald-400/80 hover:text-white font-semibold uppercase transition-colors"
+          >
+            [ ABOUT ]
+          </button>
+        </div>
       </header>
 
       {/* Center Console Portal */}

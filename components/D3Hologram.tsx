@@ -1776,7 +1776,7 @@ export default function D3Hologram({
     <div
       id="martian-matrix-hologram-wrapper"
       ref={containerRef}
-      className="absolute inset-0 w-full h-full overflow-hidden pointer-events-auto z-0 bg-gradient-to-tr from-[#1d1645] via-[#110d29] to-[#14285c] cursor-crosshair select-none"
+      className="absolute inset-0 w-full h-full overflow-hidden pointer-events-auto z-0 bg-gradient-to-tr from-[#4f46e5] via-[#7c3aed] to-[#06b6d4] cursor-crosshair select-none"
     >
       {/* Prime 3D Projection Canvas */}
       <canvas
